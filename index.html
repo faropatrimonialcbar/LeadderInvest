@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Entradas Escalonadas</title>
+    <title>LadderInvest - Planificador & Cartera de Entradas Escalonadas</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome para Iconos -->
@@ -39,11 +39,11 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="bg-blue-600 p-2 rounded-xl text-white shadow-lg shadow-blue-500/20">
-                    <i class="fa-solid fa-chart-line-up fa-lg"></i>
+                    <i class="fa-solid fa-chart-line fa-lg"></i>
                 </div>
                 <div>
                     <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
-                        LadderInvest
+                        LadderInvest Pro
                     </h1>
                     <p class="text-xs text-slate-400">Planificador de Entrada Escalonada y Gestión de Riesgo</p>
                 </div>
@@ -63,368 +63,379 @@
                     <span class="text-slate-400">Tipo de Cambio USD/ARS</span>
                     <div class="flex items-center gap-1 font-semibold text-slate-200">
                         <span>$</span>
-                        <input type="number" id="global-tc" value="1500" onchange="calculateLadder()" class="bg-transparent border-b border-slate-700 hover:border-slate-500 focus:border-blue-500 text-right w-16 focus:outline-none focus:ring-0 p-0 text-xs font-bold text-blue-400">
+                        <input type="number" id="global-tc" value="1500" onchange="calculateLadder(); renderPortfolio();" class="bg-transparent border-b border-slate-700 hover:border-slate-500 focus:border-blue-500 text-right w-16 focus:outline-none focus:ring-0 p-0 text-xs font-bold text-blue-400">
                     </div>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Grid -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Left Column: Inputs & Parameters (5 Columns) -->
-        <section class="lg:col-span-5 flex flex-col gap-6">
-            
-            <!-- Parameters Box -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-                    <h2 class="text-md font-bold text-slate-100 flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-blue-500"></i> Parámetros del Activo
-                    </h2>
-                    <span class="px-2 py-1 text-xs font-semibold rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20" id="badge-currency">
-                        Modo: USD
-                    </span>
-                </div>
-
-                <!-- Asset Identification -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Nombre del Activo</label>
-                        <div class="relative">
-                            <input type="text" id="asset-name" value="Bitcoin" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Ticker / Símbolo</label>
-                        <input type="text" id="asset-ticker" value="BTC" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm uppercase text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
-                    </div>
-                </div>
-
-                <!-- Market Values -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                            Precio de Mercado (<span class="currency-symbol">U$S</span>)
-                        </label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
-                            <input type="number" id="market-price" value="60000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-slate-100 font-semibold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                            Precio Stop Loss (<span class="currency-symbol">U$S</span>)
-                        </label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
-                            <input type="number" id="stop-loss" value="50000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-red-400 font-semibold focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all">
-                        </div>
-                        <p class="text-[10px] text-red-500/80 mt-1 flex items-center gap-1">
-                            <i class="fa-solid fa-triangle-exclamation"></i> El precio de SL debe ser menor al de Mercado.
-                        </p>
-                    </div>
-                </div>
-
-                <hr class="border-slate-800">
-
-                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <h2 class="text-sm font-bold text-slate-200">
-                        Configuración de la Estrategia
-                    </h2>
-                </div>
-
-                <!-- Capital input -->
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                        Capital Total a Invertir (<span class="currency-symbol">U$S</span>)
-                    </label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
-                        <input type="number" id="total-capital" value="10000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
-                    </div>
-                </div>
-
-                <!-- Number of entries (Slider and input) -->
-                <div class="grid grid-cols-3 gap-4 items-end">
-                    <div class="col-span-2">
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Cant. de Entradas (Pisos)</label>
-                        <input type="range" id="entry-steps-slider" min="2" max="10" value="5" oninput="updateStepsFromSlider(this.value)" class="w-full accent-blue-500 bg-slate-950 rounded-lg appearance-none h-2 cursor-pointer">
-                    </div>
-                    <div>
-                        <input type="number" id="entry-steps" min="2" max="10" value="5" oninput="updateStepsFromInput(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-center text-slate-100 font-semibold focus:outline-none focus:border-blue-500">
-                    </div>
-                </div>
-
-                <!-- Price distribution bottom range -->
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                        Precio de la Última Entrada (<span class="currency-symbol">U$S</span>)
-                    </label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
-                        <input type="number" id="min-entry-price" value="52000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-slate-100 font-semibold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
-                    </div>
-                    <p class="text-[10px] text-slate-400 mt-1">Debe estar por encima de su Stop Loss para mantener consistencia de riesgo.</p>
-                </div>
-
-                <!-- Distribution Selectors -->
-                <div class="grid grid-cols-2 gap-4">
-                    <!-- Capital distribution -->
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Distribución Capital</label>
-                        <select id="capital-dist-type" onchange="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                            <option value="equal">Uniforme (Equitativa)</option>
-                            <option value="martingale" selected>Martingala (Progresiva)</option>
-                            <option value="inverse_martingale">Piramidal (Regresiva)</option>
-                            <option value="exponential">Exponencial Agresiva</option>
-                        </select>
-                    </div>
-
-                    <!-- Price distribution -->
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Distribución Precios</label>
-                        <select id="price-dist-type" onchange="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                            <option value="linear" selected>Equidistante (Lineal)</option>
-                            <option value="logarithmic">Apretada Arriba (Logarítmica)</option>
-                            <option value="exponential">Espaciada Abajo (Exponencial)</option>
-                            <option value="fixed">Fijo (Mismo precio de entrada)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <button onclick="saveSimulation()" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all border border-slate-700">
-                    <i class="fa-solid fa-bookmark text-blue-400"></i> Guardar Simulación
+    <!-- Tabs Navigation -->
+    <div class="bg-slate-900/40 border-b border-slate-900 sticky top-16 z-30 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex gap-2">
+                <button id="tab-simulator" onclick="switchTab('simulator')" class="px-5 py-3.5 text-sm font-bold border-b-2 border-blue-500 text-blue-400 flex items-center gap-2.5 transition-all">
+                    <i class="fa-solid fa-compass"></i> Planificador & Simulador
+                </button>
+                <button id="tab-portfolio" onclick="switchTab('portfolio')" class="px-5 py-3.5 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2.5 transition-all">
+                    <i class="fa-solid fa-briefcase"></i> Mi Cartera de Inversión
+                    <span id="portfolio-badge-count" class="bg-blue-600/20 text-blue-400 border border-blue-500/20 text-[10px] px-2 py-0.5 rounded-full font-extrabold">0</span>
                 </button>
             </div>
+        </div>
+    </div>
 
-            <!-- Take Profit Configuration Box -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-4">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h2 class="text-md font-bold text-slate-100 flex items-center gap-2">
-                        <i class="fa-solid fa-crosshairs text-purple-500"></i> Salida Escalonada (Take Profit)
-                    </h2>
-                    <select id="tp-count" onchange="toggleTPFields(); calculateLadder();" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
-                        <option value="1">1 Objetivo</option>
-                        <option value="2">2 Objetivos</option>
-                        <option value="3" selected>3 Objetivos</option>
-                    </select>
-                </div>
-
-                <p class="text-slate-400 text-[11px]">Define los niveles de salida y el porcentaje del total de tus activos a vender en cada nivel.</p>
-
-                <div class="flex flex-col gap-3">
-                    <!-- TP 1 -->
-                    <div id="tp-row-1" class="grid grid-cols-12 gap-3 items-center">
-                        <div class="col-span-3 text-xs font-medium text-slate-400">TP 1:</div>
-                        <div class="col-span-5 relative">
-                            <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
-                            <input type="number" id="tp-price-1" value="70000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div class="col-span-4 relative flex items-center gap-1">
-                            <input type="number" id="tp-pct-1" value="50" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
-                            <span class="text-xs text-slate-500">%</span>
-                        </div>
-                    </div>
-
-                    <!-- TP 2 -->
-                    <div id="tp-row-2" class="grid grid-cols-12 gap-3 items-center">
-                        <div class="col-span-3 text-xs font-medium text-slate-400">TP 2:</div>
-                        <div class="col-span-5 relative">
-                            <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
-                            <input type="number" id="tp-price-2" value="75000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div class="col-span-4 relative flex items-center gap-1">
-                            <input type="number" id="tp-pct-2" value="30" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
-                            <span class="text-xs text-slate-500">%</span>
-                        </div>
-                    </div>
-
-                    <!-- TP 3 -->
-                    <div id="tp-row-3" class="grid grid-cols-12 gap-3 items-center">
-                        <div class="col-span-3 text-xs font-medium text-slate-400">TP 3:</div>
-                        <div class="col-span-5 relative">
-                            <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
-                            <input type="number" id="tp-price-3" value="80000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
-                        </div>
-                        <div class="col-span-4 relative flex items-center gap-1">
-                            <input type="number" id="tp-pct-3" value="20" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
-                            <span class="text-xs text-slate-500">%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TP Warnings / Status -->
-                <div id="tp-sum-status" class="text-[11px] font-medium p-2 rounded-xl text-center transition-all bg-slate-950 text-slate-400">
-                    Distribución total: <span id="tp-pct-sum" class="font-bold text-slate-200">100%</span>
-                </div>
-            </div>
-
-            <!-- Saved Scenarios Box -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center justify-between">
-                    <span class="flex items-center gap-2">
-                        <i class="fa-solid fa-box-archive text-indigo-400"></i> Historial de Simulaciones
-                    </span>
-                    <button onclick="clearAllSimulations()" class="text-[10px] text-red-400 hover:text-red-300">Borrar Todo</button>
-                </h3>
-                <div id="saved-scenarios-list" class="max-h-48 overflow-y-auto flex flex-col gap-2 pr-1">
-                    <!-- Dynamic scenarios list -->
-                    <p class="text-xs text-slate-500 italic text-center py-4">No hay simulaciones guardadas.</p>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- Right Column: Results & Analytics (7 Columns) -->
-        <section class="lg:col-span-7 flex flex-col gap-6">
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <!-- Tab 1: Simulator View -->
+        <div id="view-simulator" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <!-- Quick Summary Dashboard Cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <!-- Card 1: Average Price -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-calculator fa-3x"></i>
+            <!-- Left Column: Inputs & Parameters (5 Columns) -->
+            <section class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- Parameters Box -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                        <h2 class="text-md font-bold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-blue-500"></i> Parámetros del Activo
+                        </h2>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20" id="badge-currency">
+                            Modo: USD
+                        </span>
                     </div>
-                    <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Precio Promedio</span>
-                    <span id="summary-avg-price" class="text-lg font-extrabold text-slate-50">--</span>
-                    <span id="summary-avg-diff-market" class="text-[10px] text-slate-400">-- del mercado</span>
-                </div>
 
-                <!-- Card 2: Total Units -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-coins fa-3x"></i>
+                    <!-- Asset Identification -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Nombre del Activo</label>
+                            <input type="text" id="asset-name" value="Bitcoin" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Ticker / Símbolo</label>
+                            <input type="text" id="asset-ticker" value="BTC" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm uppercase text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                        </div>
                     </div>
-                    <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Activos Adquiridos</span>
-                    <span id="summary-total-units" class="text-lg font-extrabold text-slate-50">--</span>
-                    <span id="summary-ticker-badge" class="text-[10px] text-slate-400">--</span>
-                </div>
 
-                <!-- Card 3: Total Spent -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-money-bill-wave fa-3x"></i>
+                    <!-- Market Values -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                Precio de Mercado (<span class="currency-symbol">U$S</span>)
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
+                                <input type="number" id="market-price" value="60000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-slate-100 font-semibold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                Precio Stop Loss (<span class="currency-symbol">U$S</span>)
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
+                                <input type="number" id="stop-loss" value="50000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-red-400 font-semibold focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all">
+                            </div>
+                            <p class="text-[10px] text-red-500/80 mt-1 flex items-center gap-1">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Debe ser menor al de Mercado.
+                            </p>
+                        </div>
                     </div>
-                    <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Inversión Realizada</span>
-                    <span id="summary-spent-capital" class="text-lg font-extrabold text-slate-50">--</span>
-                    <span id="summary-spent-converted" class="text-[10px] text-emerald-500 font-semibold">--</span>
-                </div>
 
-                <!-- Card 4: Stop Loss Risk -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-shield-halved fa-3x"></i>
+                    <hr class="border-slate-800">
+
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h2 class="text-sm font-bold text-slate-200">
+                            Configuración de la Estrategia
+                        </h2>
                     </div>
-                    <span class="text-[10px] font-bold text-red-400 uppercase tracking-wider">Pérdida Máxima</span>
-                    <span id="summary-sl-risk" class="text-lg font-extrabold text-red-400">--</span>
-                    <span id="summary-sl-risk-pct" class="text-[10px] text-red-500 font-semibold">-- del capital</span>
-                </div>
-            </div>
 
-            <!-- Target Exit Dashboard Metrics -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <!-- Card 5: Weighted Exit Price (Take Profit) -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-map-pin fa-3x"></i>
-                    </div>
-                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Venta Promedio</span>
-                    <span id="summary-tp-avg-price" class="text-lg font-extrabold text-slate-50">--</span>
-                    <span id="summary-tp-diff-avg" class="text-[10px] text-slate-400">-- del promedio</span>
-                </div>
-
-                <!-- Card 6: Estimated Revenue -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-sack-dollar fa-3x"></i>
-                    </div>
-                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Retorno Estimado</span>
-                    <span id="summary-tp-revenue" class="text-lg font-extrabold text-slate-50">--</span>
-                    <span id="summary-tp-revenue-converted" class="text-[10px] text-slate-400">--</span>
-                </div>
-
-                <!-- Card 7: Total Projections -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-vault fa-3x"></i>
-                    </div>
-                    <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Ganancia Teórica</span>
-                    <span id="summary-tp-profit" class="text-lg font-extrabold text-emerald-400">--</span>
-                    <span id="summary-tp-profit-pct" class="text-[10px] text-emerald-500 font-semibold">-- de retorno</span>
-                </div>
-
-                <!-- Card 8: Risk-Reward Ratio (R:R Ratio) -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
-                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-scale-balanced fa-3x"></i>
-                    </div>
-                    <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Relación R:R</span>
-                    <span id="summary-rr-ratio" class="text-lg font-extrabold text-amber-400">--</span>
-                    <span id="summary-rr-badge" class="text-[10px] text-slate-400">Estadística de Riesgo</span>
-                </div>
-            </div>
-
-            <!-- Visual Chart Block -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-area text-blue-400"></i> Gráfico de Escalonamiento de Precios
-                    </h3>
-                    <div class="flex flex-wrap items-center gap-4 text-[11px]">
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Entrada</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Prom. Compra</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span> Prom. Venta</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Stop Loss</span>
-                    </div>
-                </div>
-                <div class="relative w-full h-64 sm:h-80">
-                    <canvas id="ladderChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Execution Ladder Table -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <!-- Capital input -->
                     <div>
-                        <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
-                            <i class="fa-solid fa-list-ol text-blue-400"></i> Niveles Detallados de Ejecución
-                        </h3>
-                        <p class="text-[11px] text-slate-400">Coloca órdenes de compra limitadas según este esquema.</p>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                            Capital Total a Invertir (<span class="currency-symbol">U$S</span>)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
+                            <input type="number" id="total-capital" value="10000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
+                        </div>
                     </div>
-                    <button onclick="exportCSV()" class="text-xs px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5 self-start sm:self-auto">
-                        <i class="fa-solid fa-file-export text-slate-400"></i> Exportar CSV
+
+                    <!-- Number of entries -->
+                    <div class="grid grid-cols-3 gap-4 items-end">
+                        <div class="col-span-2">
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Cant. de Entradas (Pisos)</label>
+                            <input type="range" id="entry-steps-slider" min="2" max="10" value="5" oninput="updateStepsFromSlider(this.value)" class="w-full accent-blue-500 bg-slate-950 rounded-lg appearance-none h-2 cursor-pointer">
+                        </div>
+                        <div>
+                            <input type="number" id="entry-steps" min="2" max="10" value="5" oninput="updateStepsFromInput(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-center text-slate-100 font-semibold focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Price distribution bottom range -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                            Precio de la Última Entrada (<span class="currency-symbol">U$S</span>)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
+                            <input type="number" id="min-entry-price" value="52000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-slate-100 font-semibold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Distribution Selectors -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Distribución Capital</label>
+                            <select id="capital-dist-type" onchange="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                                <option value="equal">Uniforme (Equitativa)</option>
+                                <option value="martingale" selected>Martingala (Progresiva)</option>
+                                <option value="inverse_martingale">Piramidal (Regresiva)</option>
+                                <option value="exponential">Exponencial Agresiva</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Distribución Precios</label>
+                            <select id="price-dist-type" onchange="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                                <option value="linear" selected>Equidistante (Lineal)</option>
+                                <option value="logarithmic">Apretada Arriba (Logarítmica)</option>
+                                <option value="exponential">Espaciada Abajo (Exponencial)</option>
+                                <option value="fixed">Fijo (Mismo precio de entrada)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="saveSimulation()" class="w-full py-2.5 px-4 bg-slate-850 hover:bg-slate-800 text-slate-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all border border-slate-700">
+                        <i class="fa-solid fa-bookmark text-blue-400"></i> Guardar en Historial
                     </button>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-950/40 border-b border-slate-800 text-[10px] font-bold text-slate-400 tracking-wider">
-                                <th class="py-3 px-4 text-center">Piso #</th>
-                                <th class="py-3 px-4">Precio Entrada</th>
-                                <th class="py-3 px-4 text-right">Monto Asignado</th>
-                                <th class="py-3 px-4 text-right">Monto Convertido</th>
-                                <th class="py-3 px-4 text-right">Cantidad Compra</th>
-                                <th class="py-3 px-4 text-right">Promedio Parcial</th>
-                                <th class="py-3 px-4 text-center">Riesgo a SL</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ladder-table-body" class="divide-y divide-slate-850 text-xs">
-                            <!-- Dynamic content generated by JS -->
-                        </tbody>
-                    </table>
+                <!-- Take Profit Configuration Box -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h2 class="text-md font-bold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-crosshairs text-purple-500"></i> Salida Escalonada (Take Profit)
+                        </h2>
+                        <select id="tp-count" onchange="toggleTPFields(); calculateLadder();" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+                            <option value="1">1 Objetivo</option>
+                            <option value="2">2 Objetivos</option>
+                            <option value="3" selected>3 Objetivos</option>
+                        </select>
+                    </div>
+
+                    <p class="text-slate-400 text-[11px]">Define los niveles de salida y el porcentaje a vender en cada nivel.</p>
+
+                    <div class="flex flex-col gap-3">
+                        <div id="tp-row-1" class="grid grid-cols-12 gap-3 items-center">
+                            <div class="col-span-3 text-xs font-medium text-slate-400">TP 1:</div>
+                            <div class="col-span-5 relative">
+                                <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
+                                <input type="number" id="tp-price-1" value="70000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
+                            </div>
+                            <div class="col-span-4 relative flex items-center gap-1">
+                                <input type="number" id="tp-pct-1" value="50" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
+                                <span class="text-xs text-slate-500">%</span>
+                            </div>
+                        </div>
+
+                        <div id="tp-row-2" class="grid grid-cols-12 gap-3 items-center">
+                            <div class="col-span-3 text-xs font-medium text-slate-400">TP 2:</div>
+                            <div class="col-span-5 relative">
+                                <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
+                                <input type="number" id="tp-price-2" value="75000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
+                            </div>
+                            <div class="col-span-4 relative flex items-center gap-1">
+                                <input type="number" id="tp-pct-2" value="30" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
+                                <span class="text-xs text-slate-500">%</span>
+                            </div>
+                        </div>
+
+                        <div id="tp-row-3" class="grid grid-cols-12 gap-3 items-center">
+                            <div class="col-span-3 text-xs font-medium text-slate-400">TP 3:</div>
+                            <div class="col-span-5 relative">
+                                <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
+                                <input type="number" id="tp-price-3" value="80000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
+                            </div>
+                            <div class="col-span-4 relative flex items-center gap-1">
+                                <input type="number" id="tp-pct-3" value="20" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
+                                <span class="text-xs text-slate-500">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tp-sum-status" class="text-[11px] font-medium p-2 rounded-xl text-center transition-all bg-slate-950 text-slate-400">
+                        Distribución total: <span id="tp-pct-sum" class="font-bold text-slate-200">100%</span>
+                    </div>
+                </div>
+
+                <!-- Saved Scenarios Box -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center justify-between">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-solid fa-box-archive text-indigo-400"></i> Historial de Simulaciones
+                        </span>
+                        <button onclick="clearAllSimulations()" class="text-[10px] text-red-400 hover:text-red-300">Borrar Todo</button>
+                    </h3>
+                    <div id="saved-scenarios-list" class="max-h-64 overflow-y-auto flex flex-col gap-2 pr-1">
+                        <p class="text-xs text-slate-500 italic text-center py-4">No hay simulaciones guardadas.</p>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Right Column: Results & Analytics (7 Columns) -->
+            <section class="lg:col-span-7 flex flex-col gap-6">
+                
+                <!-- Quick Summary Dashboard Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                        <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Precio Promedio</span>
+                        <span id="summary-avg-price" class="text-lg font-extrabold text-slate-50">--</span>
+                        <span id="summary-avg-diff-market" class="text-[10px] text-slate-400">--</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Activos</span>
+                        <span id="summary-total-units" class="text-lg font-extrabold text-slate-50">--</span>
+                        <span id="summary-ticker-badge" class="text-[10px] text-slate-400">--</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                        <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Inversión</span>
+                        <span id="summary-spent-capital" class="text-lg font-extrabold text-slate-50">--</span>
+                        <span id="summary-spent-converted" class="text-[10px] text-emerald-500 font-semibold">--</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                        <span class="text-[10px] font-bold text-red-400 uppercase tracking-wider">Pérdida Máxima</span>
+                        <span id="summary-sl-risk" class="text-lg font-extrabold text-red-400">--</span>
+                        <span id="summary-sl-risk-pct" class="text-[10px] text-red-500 font-semibold">--</span>
+                    </div>
+                </div>
+
+                <!-- Target Exit Dashboard Metrics -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                        <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Venta Promedio</span>
+                        <span id="summary-tp-avg-price" class="text-lg font-extrabold text-slate-50">--</span>
+                        <span id="summary-tp-diff-avg" class="text-[10px] text-slate-400">--</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                        <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Retorno Estimado</span>
+                        <span id="summary-tp-revenue" class="text-lg font-extrabold text-slate-50">--</span>
+                        <span id="summary-tp-revenue-converted" class="text-[10px] text-slate-400">--</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                        <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Ganancia Teórica</span>
+                        <span id="summary-tp-profit" class="text-lg font-extrabold text-emerald-400">--</span>
+                        <span id="summary-tp-profit-pct" class="text-[10px] text-emerald-500 font-semibold">--</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Relación R:R</span>
+                        <span id="summary-rr-ratio" class="text-lg font-extrabold text-amber-400">--</span>
+                        <span id="summary-rr-badge" class="text-[10px] text-slate-400">--</span>
+                    </div>
+                </div>
+
+                <!-- Visual Chart Block -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-area text-blue-400"></i> Gráfico de Escalonamiento de Precios
+                        </h3>
+                    </div>
+                    <div class="relative w-full h-64 sm:h-80">
+                        <canvas id="ladderChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Execution Ladder Table -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-list-ol text-blue-400"></i> Niveles Detallados de Ejecución
+                            </h3>
+                            <p class="text-[11px] text-slate-400">Coloca órdenes de compra limitadas según este esquema.</p>
+                        </div>
+                        <button onclick="exportCSV()" class="text-xs px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5 self-start sm:self-auto">
+                            <i class="fa-solid fa-file-export text-slate-400"></i> Exportar CSV
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-950/40 border-b border-slate-800 text-[10px] font-bold text-slate-400 tracking-wider">
+                                    <th class="py-3 px-4 text-center">Piso #</th>
+                                    <th class="py-3 px-4">Precio Entrada</th>
+                                    <th class="py-3 px-4 text-right">Monto Asignado</th>
+                                    <th class="py-3 px-4 text-right">Monto Convertido</th>
+                                    <th class="py-3 px-4 text-right">Cantidad Compra</th>
+                                    <th class="py-3 px-4 text-right">Promedio Parcial</th>
+                                    <th class="py-3 px-4 text-center">Riesgo a SL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ladder-table-body" class="divide-y divide-slate-850 text-xs">
+                                <!-- Dynamic content generated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+
+        <!-- Tab 2: Portfolio View -->
+        <div id="view-portfolio" class="hidden flex flex-col gap-6">
+            
+            <!-- Portfolio Top Metrics Dashboard -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <!-- Port Card 1: Total Committed Budget -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Capital Total Asignado</span>
+                    <span id="port-total-capital" class="text-lg font-extrabold text-slate-50">--</span>
+                    <span class="text-[10px] text-slate-500">Suma total de presupuestos</span>
+                </div>
+                <!-- Port Card 2: Deployed Capital (Invested Cost Basis) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden">
+                    <span class="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Capital Invertido Activo</span>
+                    <span id="port-invested-capital" class="text-lg font-extrabold text-slate-50">--</span>
+                    <span class="text-[10px] text-slate-500">Monto actual en activos</span>
+                </div>
+                <!-- Port Card 3: Free Cash / Liquidity -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden">
+                    <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Liquidez Disponible</span>
+                    <span id="port-liquidity" class="text-lg font-extrabold text-emerald-400">--</span>
+                    <span class="text-[10px] text-slate-500">No invertido + cash retornado</span>
+                </div>
+                <!-- Port Card 4: Realized Return -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden">
+                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Resultado Realizado</span>
+                    <span id="port-realized-pnl" class="text-lg font-extrabold">--</span>
+                    <span id="port-realized-pnl-pct" class="text-[10px] font-semibold">--</span>
                 </div>
             </div>
 
-        </section>
+            <!-- Active Assets Tracking Container -->
+            <div class="flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-list text-blue-500"></i> Operativas Activas en Cartera
+                    </h3>
+                    <p class="text-[11px] text-slate-400">Haz clic sobre las compras o ventas a medida que ocurran en tu broker para actualizar la cartera.</p>
+                </div>
+
+                <div id="portfolio-items-list" class="grid grid-cols-1 gap-6">
+                    <!-- Dynamic Portfolio Items Rendered by JS -->
+                </div>
+            </div>
+
+        </div>
 
     </main>
 
     <!-- Footer Section -->
     <footer class="border-t border-slate-900 bg-slate-950 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-            <p>© 2026 LadderInvest Tools. Todos los cálculos son estimaciones matemáticas financieras.</p>
+            <p>© 2026 LadderInvest Pro Tools. Todos los cálculos son estimaciones matemáticas financieras.</p>
             <div class="flex items-center gap-4">
                 <span class="hover:text-slate-300 cursor-pointer">Términos de uso</span>
                 <span class="hover:text-slate-300 cursor-pointer">Gestión de Riesgo</span>
@@ -438,6 +449,8 @@
         let globalCurrency = 'USD'; // 'USD' or 'ARS'
         let chartInstance = null;
         let ladderData = []; // Array of calculated steps
+        const storageKey = 'ladder_invest_saved_plans';
+        const portfolioStorageKey = 'ladder_invest_portfolio';
 
         // Format Helper
         function formatMoney(amount, currency = globalCurrency) {
@@ -482,10 +495,8 @@
                 if (input) {
                     let val = parseFloat(input.value) || 0;
                     if (prevCurrency === 'USD' && currency === 'ARS') {
-                        // Convert USD values to ARS
                         input.value = (val * tc).toFixed(3);
                     } else if (prevCurrency === 'ARS' && currency === 'USD') {
-                        // Convert ARS values to USD
                         input.value = (val / tc).toFixed(3);
                     }
                 }
@@ -497,6 +508,7 @@
             });
 
             calculateLadder();
+            renderPortfolio();
         }
 
         // Update step inputs synchronized with sliders
@@ -515,7 +527,6 @@
 
         // Main Core Logic: Compute DCA Levels and TP Targets
         function calculateLadder() {
-            // Read all inputs
             const ticker = document.getElementById('asset-ticker').value.toUpperCase() || 'ACTIVO';
             const assetName = document.getElementById('asset-name').value || 'Activo Simulado';
             const marketPrice = parseFloat(document.getElementById('market-price').value) || 0;
@@ -538,18 +549,14 @@
 
             const minEntryPrice = parseFloat(minEntryInput.value) || 0;
 
-            // Clean error states or bad validations
             if (marketPrice <= 0 || stopLoss <= 0 || totalCapital <= 0 || minEntryPrice <= 0 || stepsCount < 2) {
-                return; // Silently avoid calculating invalid numbers
+                return; 
             }
 
-            // Calculation containers
             const prices = [];
             const capitalAllocations = [];
             
-            // 1. Calculate Prices for each Step
             if (priceDistType === 'fixed') {
-                // Apply the exact same entry price (Market Price) for all steps
                 for (let i = 0; i < stepsCount; i++) {
                     prices.push(marketPrice);
                 }
@@ -570,7 +577,6 @@
                 }
             }
 
-            // 2. Calculate Capital Allocations
             let weights = [];
             if (capDistType === 'equal') {
                 weights = Array(stepsCount).fill(1);
@@ -590,13 +596,11 @@
                 }
             }
 
-            // Normalize weights to sum up exactly to totalCapital
             const totalWeights = weights.reduce((acc, curr) => acc + curr, 0);
             for (let i = 0; i < stepsCount; i++) {
                 capitalAllocations.push((weights[i] / totalWeights) * totalCapital);
             }
 
-            // 3. Complete Step Calculations
             ladderData = [];
             let cumulativeCapital = 0;
             let cumulativeUnits = 0;
@@ -610,11 +614,9 @@
                 cumulativeUnits += units;
                 const partialAvg = cumulativeCapital / cumulativeUnits;
                 
-                // Converted currency representation
                 const otherCurrency = globalCurrency === 'USD' ? 'ARS' : 'USD';
                 const convertedCapital = globalCurrency === 'USD' ? capital * tc : capital / tc;
 
-                // Stop loss risk for this level
                 const distanceToSL = price > stopLoss ? ((price - stopLoss) / price) * 100 : 0;
                 const levelRiskCapital = price > stopLoss ? (price - stopLoss) * units : 0;
 
@@ -632,13 +634,11 @@
                 });
             }
 
-            // Global entry totals
             const avgAcquiredPrice = cumulativeCapital / cumulativeUnits;
             const maxRiskAmount = cumulativeCapital - (cumulativeUnits * stopLoss);
             const maxRiskPct = (maxRiskAmount / totalCapital) * 100;
             const diffMarketAvg = ((avgAcquiredPrice - marketPrice) / marketPrice) * 100;
 
-            // 4. Calculate Take Profit Metrics
             const tpCount = parseInt(document.getElementById('tp-count').value);
             let tpPrices = [];
             let tpPcts = [];
@@ -667,7 +667,6 @@
                 tpStatusEl.className = "text-[11px] font-semibold p-2 rounded-xl text-center bg-emerald-500/15 text-emerald-400 border border-emerald-500/10";
             }
 
-            // Calculate weighted sell price & metrics
             let weightedSellPrice = 0;
             let totalRevenue = 0;
             
@@ -681,12 +680,10 @@
             const totalProfitPct = (totalProfit / cumulativeCapital) * 100;
             const diffTpAvg = ((weightedSellPrice - avgAcquiredPrice) / avgAcquiredPrice) * 100;
             
-            // Risk-to-Reward Ratio (R:R)
             const rrRatioVal = maxRiskAmount > 0 ? (totalProfit / maxRiskAmount) : 0;
 
-            // Render Entry details to cards
             document.getElementById('summary-avg-price').innerText = formatMoney(avgAcquiredPrice);
-            document.getElementById('summary-avg-diff-market').innerText = `${diffMarketAvg >= 0 ? '+' : ''}${diffMarketAvg.toFixed(2)}%`;
+            document.getElementById('summary-avg-diff-market').innerText = `${diffMarketAvg >= 0 ? '+' : ''}${diffMarketAvg.toFixed(2)}% del mercado`;
             document.getElementById('summary-avg-diff-market').className = `text-[10px] font-bold ${diffMarketAvg <= 0 ? 'text-emerald-400' : 'text-amber-400'}`;
 
             document.getElementById('summary-total-units').innerText = cumulativeUnits.toLocaleString('es-AR', { maximumFractionDigits: 6 });
@@ -700,7 +697,6 @@
             document.getElementById('summary-sl-risk').innerText = formatMoney(maxRiskAmount);
             document.getElementById('summary-sl-risk-pct').innerText = `${maxRiskPct.toFixed(2)}% de tu capital`;
 
-            // Render Take Profit details to cards
             document.getElementById('summary-tp-avg-price').innerText = formatMoney(weightedSellPrice);
             document.getElementById('summary-tp-diff-avg').innerText = `${diffTpAvg >= 0 ? '+' : ''}${diffTpAvg.toFixed(2)}% del promedio`;
             document.getElementById('summary-tp-diff-avg').className = `text-[10px] font-bold ${diffTpAvg >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
@@ -717,64 +713,32 @@
             document.getElementById('summary-rr-badge').innerText = rrRatioVal >= 2 ? "Favorable (> 1:2)" : "Poco Favorable (< 1:2)";
             document.getElementById('summary-rr-badge').className = `text-[10px] font-semibold ${rrRatioVal >= 2 ? 'text-emerald-400' : 'text-amber-500'}`;
 
-            // Draw and render the data table
             renderTable();
-
-            // Refresh analytical charts
             renderChart(marketPrice, stopLoss, avgAcquiredPrice, weightedSellPrice, tpPrices, tpPcts);
         }
 
-        function renderTable() {
-            const tableBody = document.getElementById('ladder-table-body');
-            tableBody.innerHTML = '';
-
-            const otherCurrency = globalCurrency === 'USD' ? 'ARS' : 'USD';
-
-            ladderData.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-900/60 transition-colors";
-
-                tr.innerHTML = `
-                    <td class="py-3 px-4 text-center font-bold text-slate-400">${item.step}</td>
-                    <td class="py-3 px-4 font-semibold text-slate-100">${formatMoney(item.price)}</td>
-                    <td class="py-3 px-4 text-right text-slate-300 font-mono">${formatMoney(item.capital)}</td>
-                    <td class="py-3 px-4 text-right text-slate-400 font-mono text-[11px]">${formatMoney(item.convertedCapital, otherCurrency)}</td>
-                    <td class="py-3 px-4 text-right text-amber-300/90 font-mono">${item.units.toLocaleString('es-AR', { maximumFractionDigits: 6 })}</td>
-                    <td class="py-3 px-4 text-right text-emerald-400/90 font-semibold font-mono">${formatMoney(item.partialAvg)}</td>
-                    <td class="py-3 px-4 text-center">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.distanceToSL > 15 ? 'bg-red-500/10 text-red-400' : 'bg-orange-500/10 text-orange-400'}">
-                            -${item.distanceToSL.toFixed(1)}%
-                        </span>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
-        }
-
         function renderChart(marketPrice, stopLoss, averagePrice, weightedSellPrice, tpPrices = [], tpPcts = []) {
-            const ctx = document.getElementById('ladderChart').getContext('2d');
+            const canvas = document.getElementById('ladderChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
             
-            // Map data for graph labels and datasets
             const labels = ladderData.map(item => `Piso ${item.step}`);
             const prices = ladderData.map(item => item.price);
             const sizes = ladderData.map(item => item.capital);
 
-            // Compute ideal scales (padding values)
-            const allPrices = [...prices, marketPrice, stopLoss, averagePrice, weightedSellPrice, ...tpPrices];
+            const allPrices = [...prices, marketPrice, stopLoss, averagePrice, weightedSellPrice, ...tpPrices].filter(p => p > 0);
             const maxVal = Math.max(...allPrices) * 1.05;
             const minVal = Math.min(...allPrices) * 0.95;
 
-            // Destroy previous chart to avoid overlapping glitches
             if (chartInstance) {
                 chartInstance.destroy();
             }
 
-            // Normalizing bubble sizes for display weights
             const maxCap = Math.max(...sizes);
             const minCap = Math.min(...sizes);
             const bubbleSizes = sizes.map(cap => {
                 if (maxCap === minCap) return 12;
-                return 8 + ((cap - minCap) / (maxCap - minCap)) * 14; // Sizes between 8px and 22px
+                return 8 + ((cap - minCap) / (maxCap - minCap)) * 14;
             });
 
             const datasetPrices = {
@@ -801,16 +765,12 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     const index = context.dataIndex;
-                                    const capitalFormatted = formatMoney(sizes[index]);
-                                    const priceFormatted = formatMoney(prices[index]);
-                                    return ` Entrada ${index + 1}: ${priceFormatted} | Capital: ${capitalFormatted}`;
+                                    return ` Entrada ${index + 1}: ${formatMoney(prices[index])} | Capital: ${formatMoney(sizes[index])}`;
                                 }
                             }
                         }
@@ -819,31 +779,16 @@
                         y: {
                             min: minVal,
                             max: maxVal,
-                            grid: {
-                                color: 'rgba(51, 65, 85, 0.3)'
-                            },
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
                             ticks: {
                                 color: '#94a3b8',
-                                font: {
-                                    family: 'Inter',
-                                    size: 10
-                                },
-                                callback: function(value) {
-                                    return value.toLocaleString('es-AR', { maximumFractionDigits: 3 });
-                                }
+                                font: { family: 'Inter', size: 10 },
+                                callback: value => value.toLocaleString('es-AR', { maximumFractionDigits: 3 })
                             }
                         },
                         x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: '#94a3b8',
-                                font: {
-                                    family: 'Inter',
-                                    size: 10
-                                }
-                            }
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } }
                         }
                     }
                 },
@@ -853,74 +798,49 @@
                         const {ctx, chartArea: {left, right}, scales: {y}} = chart;
                         ctx.save();
 
-                        // 1. Draw Average Entry Price Line
                         const avgY = y.getPixelForValue(averagePrice);
-                        ctx.strokeStyle = '#10b981'; // Emerald Green
+                        ctx.strokeStyle = '#10b981';
                         ctx.lineWidth = 2;
                         ctx.setLineDash([6, 4]);
-                        ctx.beginPath();
-                        ctx.moveTo(left, avgY);
-                        ctx.lineTo(right, avgY);
-                        ctx.stroke();
-
+                        ctx.beginPath(); ctx.moveTo(left, avgY); ctx.lineTo(right, avgY); ctx.stroke();
                         ctx.fillStyle = '#10b981';
                         ctx.font = 'bold 9px Inter';
                         ctx.fillText(`PROM. COMPRA: ${averagePrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, avgY - 5);
 
-                        // 2. Draw Stop Loss Line
                         const slY = y.getPixelForValue(stopLoss);
-                        ctx.strokeStyle = '#ef4444'; // Red
+                        ctx.strokeStyle = '#ef4444';
                         ctx.lineWidth = 2;
                         ctx.setLineDash([4, 4]);
-                        ctx.beginPath();
-                        ctx.moveTo(left, slY);
-                        ctx.lineTo(right, slY);
-                        ctx.stroke();
-
+                        ctx.beginPath(); ctx.moveTo(left, slY); ctx.lineTo(right, slY); ctx.stroke();
                         ctx.fillStyle = '#ef4444';
                         ctx.font = 'bold 9px Inter';
                         ctx.fillText(`STOP LOSS: ${stopLoss.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, slY - 5);
 
-                        // 3. Draw Market Price Line
                         const mktY = y.getPixelForValue(marketPrice);
-                        ctx.strokeStyle = '#94a3b8'; // Slate
+                        ctx.strokeStyle = '#94a3b8';
                         ctx.lineWidth = 1;
                         ctx.setLineDash([2, 2]);
-                        ctx.beginPath();
-                        ctx.moveTo(left, mktY);
-                        ctx.lineTo(right, mktY);
-                        ctx.stroke();
-
+                        ctx.beginPath(); ctx.moveTo(left, mktY); ctx.lineTo(right, mktY); ctx.stroke();
                         ctx.fillStyle = '#94a3b8';
                         ctx.font = '9px Inter';
                         ctx.fillText(`MERCADO: ${marketPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, right - 90, mktY - 5);
 
-                        // 4. Draw Weighted Sell Price (Take Profit Average)
                         const tpAvgY = y.getPixelForValue(weightedSellPrice);
-                        ctx.strokeStyle = '#8b5cf6'; // Indigo/Purple
+                        ctx.strokeStyle = '#8b5cf6';
                         ctx.lineWidth = 2;
                         ctx.setLineDash([6, 4]);
-                        ctx.beginPath();
-                        ctx.moveTo(left, tpAvgY);
-                        ctx.lineTo(right, tpAvgY);
-                        ctx.stroke();
-
+                        ctx.beginPath(); ctx.moveTo(left, tpAvgY); ctx.lineTo(right, tpAvgY); ctx.stroke();
                         ctx.fillStyle = '#a78bfa';
                         ctx.font = 'bold 9px Inter';
                         ctx.fillText(`VENTA PROMEDIO: ${weightedSellPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, tpAvgY - 5);
 
-                        // 5. Draw Individual TP Goals
                         tpPrices.forEach((tpPrice, idx) => {
                             if (tpPrice > 0) {
                                 const tpY = y.getPixelForValue(tpPrice);
-                                ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)'; // Soft Purple
+                                ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
                                 ctx.lineWidth = 1;
                                 ctx.setLineDash([3, 3]);
-                                ctx.beginPath();
-                                ctx.moveTo(left, tpY);
-                                ctx.lineTo(right, tpY);
-                                ctx.stroke();
-
+                                ctx.beginPath(); ctx.moveTo(left, tpY); ctx.lineTo(right, tpY); ctx.stroke();
                                 ctx.fillStyle = 'rgba(167, 139, 250, 0.75)';
                                 ctx.font = '9px Inter';
                                 ctx.fillText(`TP ${idx + 1} (${tpPcts[idx]}%): ${tpPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, right - 110, tpY - 5);
@@ -933,8 +853,31 @@
             });
         }
 
-        // Simulation Preservation Management
-        const storageKey = 'ladder_invest_saved_plans';
+        function renderTable() {
+            const tableBody = document.getElementById('ladder-table-body');
+            if (!tableBody) return;
+            tableBody.innerHTML = '';
+            const otherCurrency = globalCurrency === 'USD' ? 'ARS' : 'USD';
+
+            ladderData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/60 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-center font-bold text-slate-400">${item.step}</td>
+                    <td class="py-3 px-4 font-semibold text-slate-100">${formatMoney(item.price)}</td>
+                    <td class="py-3 px-4 text-right text-slate-300 font-mono">${formatMoney(item.capital)}</td>
+                    <td class="py-3 px-4 text-right text-slate-400 font-mono text-[11px]">${formatMoney(item.convertedCapital, otherCurrency)}</td>
+                    <td class="py-3 px-4 text-right text-amber-300/90 font-mono">${item.units.toLocaleString('es-AR', { maximumFractionDigits: 6 })}</td>
+                    <td class="py-3 px-4 text-right text-emerald-400/90 font-semibold font-mono">${formatMoney(item.partialAvg)}</td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.distanceToSL > 15 ? 'bg-red-500/10 text-red-400' : 'bg-orange-500/10 text-orange-400'}">
+                            -${item.distanceToSL.toFixed(1)}%
+                        </span>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
 
         function getSavedSimulations() {
             const data = localStorage.getItem(storageKey);
@@ -952,7 +895,6 @@
             const capDistType = document.getElementById('capital-dist-type').value;
             const priceDistType = document.getElementById('price-dist-type').value;
 
-            // TP state parameters saved
             const tpCount = parseInt(document.getElementById('tp-count').value);
             const tpPrice1 = parseFloat(document.getElementById('tp-price-1').value) || 0;
             const tpPct1 = parseFloat(document.getElementById('tp-pct-1').value) || 0;
@@ -961,34 +903,18 @@
             const tpPrice3 = parseFloat(document.getElementById('tp-price-3').value) || 0;
             const tpPct3 = parseFloat(document.getElementById('tp-pct-3').value) || 0;
 
-            if (!ticker || totalCapital <= 0) {
-                return;
-            }
+            if (totalCapital <= 0) return;
 
             const payload = {
                 id: Date.now(),
-                ticker,
-                name,
-                marketPrice,
-                stopLoss,
-                totalCapital,
-                stepsCount,
-                minEntryPrice,
-                capDistType,
-                priceDistType,
-                tpCount,
-                tpPrice1,
-                tpPct1,
-                tpPrice2,
-                tpPct2,
-                tpPrice3,
-                tpPct3,
+                ticker, name, marketPrice, stopLoss, totalCapital, stepsCount, minEntryPrice,
+                capDistType, priceDistType, tpCount, tpPrice1, tpPct1, tpPrice2, tpPct2, tpPrice3, tpPct3,
                 currency: globalCurrency,
                 timestamp: new Date().toLocaleDateString('es-AR')
             };
 
             const list = getSavedSimulations();
-            list.unshift(payload); // Add first
+            list.unshift(payload);
             localStorage.setItem(storageKey, JSON.stringify(list));
 
             renderSavedList();
@@ -999,26 +925,10 @@
             const scenario = list.find(item => item.id === id);
             if (!scenario) return;
 
-            // Enforce currency mode first
             if (scenario.currency !== globalCurrency) {
-                globalCurrency = scenario.currency;
-                const btnUsd = document.getElementById('btn-global-usd');
-                const btnArs = document.getElementById('btn-global-ars');
-                if (globalCurrency === 'USD') {
-                    btnUsd.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-600 text-white shadow";
-                    btnArs.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white";
-                    document.getElementById('badge-currency').innerText = "Modo: USD";
-                } else {
-                    btnArs.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-600 text-white shadow";
-                    btnUsd.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white";
-                    document.getElementById('badge-currency').innerText = "Modo: ARS";
-                }
-                document.querySelectorAll('.currency-symbol').forEach(el => {
-                    el.innerText = globalCurrency === 'USD' ? 'U$S' : 'AR$';
-                });
+                setGlobalCurrency(scenario.currency);
             }
 
-            // Fill parameters
             document.getElementById('asset-ticker').value = scenario.ticker;
             document.getElementById('asset-name').value = scenario.name;
             document.getElementById('market-price').value = scenario.marketPrice;
@@ -1030,7 +940,6 @@
             document.getElementById('capital-dist-type').value = scenario.capDistType;
             document.getElementById('price-dist-type').value = scenario.priceDistType;
 
-            // Load TPs parameters if exists
             if (scenario.tpCount !== undefined) {
                 document.getElementById('tp-count').value = scenario.tpCount;
                 document.getElementById('tp-price-1').value = scenario.tpPrice1;
@@ -1046,7 +955,7 @@
         }
 
         function deleteSimulation(id, event) {
-            event.stopPropagation(); // Avoid triggering card loading
+            event.stopPropagation();
             let list = getSavedSimulations();
             list = list.filter(item => item.id !== id);
             localStorage.setItem(storageKey, JSON.stringify(list));
@@ -1060,6 +969,7 @@
 
         function renderSavedList() {
             const container = document.getElementById('saved-scenarios-list');
+            if (!container) return;
             const list = getSavedSimulations();
 
             if (list.length === 0) {
@@ -1085,8 +995,10 @@
                             <span>${item.stepsCount} niveles</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] text-slate-500">${item.timestamp}</span>
+                    <div class="flex items-center gap-2" onclick="event.stopPropagation();">
+                        <button onclick="executeToPortfolio(${item.id})" class="px-2.5 py-1 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/20 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1">
+                            <i class="fa-solid fa-play text-[9px]"></i> Ejecutar
+                        </button>
                         <button onclick="deleteSimulation(${item.id}, event)" class="p-1 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded transition-all">
                             <i class="fa-solid fa-trash-can text-[11px]"></i>
                         </button>
@@ -1096,7 +1008,516 @@
             });
         }
 
-        // Export simulation details as a CSV download
+        function switchTab(tabId) {
+            const simTab = document.getElementById('tab-simulator');
+            const portTab = document.getElementById('tab-portfolio');
+            const simView = document.getElementById('view-simulator');
+            const portView = document.getElementById('view-portfolio');
+
+            if (tabId === 'simulator') {
+                simTab.className = "px-5 py-3.5 text-sm font-bold border-b-2 border-blue-500 text-blue-400 flex items-center gap-2.5 transition-all";
+                portTab.className = "px-5 py-3.5 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2.5 transition-all";
+                simView.classList.remove('hidden');
+                portView.classList.add('hidden');
+                calculateLadder();
+            } else {
+                portTab.className = "px-5 py-3.5 text-sm font-bold border-b-2 border-blue-500 text-blue-400 flex items-center gap-2.5 transition-all";
+                simTab.className = "px-5 py-3.5 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2.5 transition-all";
+                portView.classList.remove('hidden');
+                simView.classList.add('hidden');
+                renderPortfolio();
+            }
+        }
+
+        function getPortfolio() {
+            const data = localStorage.getItem(portfolioStorageKey);
+            return data ? JSON.parse(data) : [];
+        }
+
+        function savePortfolio(portfolio) {
+            localStorage.setItem(portfolioStorageKey, JSON.stringify(portfolio));
+            updatePortfolioBadge();
+        }
+
+        function updatePortfolioBadge() {
+            const port = getPortfolio();
+            const badge = document.getElementById('portfolio-badge-count');
+            if (badge) {
+                badge.innerText = port.length;
+            }
+        }
+
+        // Move a simulation into the real Portfolio
+        function executeToPortfolio(id) {
+            const list = getSavedSimulations();
+            const scenario = list.find(item => item.id === id);
+            if (!scenario) return;
+
+            const portfolio = getPortfolio();
+            
+            // Check if already executed to avoid absolute duplicates
+            const newItem = {
+                id: Date.now(),
+                ticker: scenario.ticker,
+                name: scenario.name,
+                marketPrice: scenario.marketPrice,
+                stopLoss: scenario.stopLoss,
+                totalCapital: scenario.totalCapital,
+                stepsCount: scenario.stepsCount,
+                minEntryPrice: scenario.minEntryPrice,
+                capDistType: scenario.capDistType,
+                priceDistType: scenario.priceDistType,
+                tpCount: scenario.tpCount,
+                tpPrice1: scenario.tpPrice1,
+                tpPct1: scenario.tpPct1,
+                tpPrice2: scenario.tpPrice2,
+                tpPct2: scenario.tpPct2,
+                tpPrice3: scenario.tpPrice3,
+                tpPct3: scenario.tpPct3,
+                currency: scenario.currency,
+                executedSteps: [1], // Default execute the first level to make it reactive instantly
+                executedTps: [],
+                slExecuted: false
+            };
+
+            portfolio.unshift(newItem);
+            savePortfolio(portfolio);
+            switchTab('portfolio');
+        }
+
+        function calculatePortfolioItemDetails(item) {
+            let cash = item.totalCapital;
+            let units = 0;
+            let costBasis = 0;
+            let realizedPnL = 0;
+            let activeBuysCount = 0;
+
+            const stepsCount = item.stepsCount;
+            const prices = [];
+            const capitalAllocations = [];
+
+            if (item.priceDistType === 'fixed') {
+                for (let i = 0; i < stepsCount; i++) prices.push(item.marketPrice);
+            } else if (item.priceDistType === 'linear') {
+                const diff = (item.marketPrice - item.minEntryPrice) / (stepsCount - 1);
+                for (let i = 0; i < stepsCount; i++) prices.push(item.marketPrice - i * diff);
+            } else if (item.priceDistType === 'logarithmic') {
+                for (let i = 0; i < stepsCount; i++) {
+                    const pct = Math.log(1 + (i / (stepsCount - 1)) * (Math.E - 1));
+                    prices.push(item.marketPrice - pct * (item.marketPrice - item.minEntryPrice));
+                }
+            } else if (item.priceDistType === 'exponential') {
+                for (let i = 0; i < stepsCount; i++) {
+                    const pct = (Math.pow(2, i / (stepsCount - 1)) - 1);
+                    prices.push(item.marketPrice - pct * (item.marketPrice - item.minEntryPrice));
+                }
+            }
+
+            let weights = [];
+            if (item.capDistType === 'equal') {
+                weights = Array(stepsCount).fill(1);
+            } else if (item.capDistType === 'martingale') {
+                const baseMultiplier = 1.5;
+                for (let i = 0; i < stepsCount; i++) weights.push(Math.pow(baseMultiplier, i));
+            } else if (item.capDistType === 'inverse_martingale') {
+                const baseMultiplier = 1.5;
+                for (let i = 0; i < stepsCount; i++) weights.push(Math.pow(baseMultiplier, stepsCount - 1 - i));
+            } else if (item.capDistType === 'exponential') {
+                for (let i = 0; i < stepsCount; i++) weights.push(Math.pow(2, i));
+            }
+
+            const totalWeights = weights.reduce((acc, curr) => acc + curr, 0);
+            for (let i = 0; i < stepsCount; i++) {
+                capitalAllocations.push((weights[i] / totalWeights) * item.totalCapital);
+            }
+
+            const stepDetails = [];
+            let totalPlannedUnits = 0;
+            for (let i = 0; i < stepsCount; i++) {
+                const p = prices[i];
+                const cap = capitalAllocations[i];
+                const u = cap / p;
+                totalPlannedUnits += u;
+                stepDetails.push({
+                    step: i + 1,
+                    price: p,
+                    capital: cap,
+                    units: u,
+                    executed: !!(item.executedSteps && item.executedSteps.includes(i + 1))
+                });
+            }
+
+            const tpDetails = [];
+            for (let i = 1; i <= item.tpCount; i++) {
+                tpDetails.push({
+                    tp: i,
+                    price: item[`tpPrice${i}`],
+                    pct: item[`tpPct${i}`],
+                    executed: !!(item.executedTps && item.executedTps.includes(i))
+                });
+            }
+
+            // Apply sequence: Executed Buys
+            stepDetails.forEach(step => {
+                if (step.executed) {
+                    cash -= step.capital;
+                    units += step.units;
+                    costBasis += step.capital;
+                    activeBuysCount++;
+                }
+            });
+
+            let avgPrice = units > 0 ? costBasis / units : 0;
+
+            // Apply sequence: Executed TPs in order
+            tpDetails.forEach(tp => {
+                if (tp.executed) {
+                    let sellUnits = totalPlannedUnits * (tp.pct / 100);
+                    sellUnits = Math.min(sellUnits, units); // Safeguard
+                    
+                    const revenue = sellUnits * tp.price;
+                    const costOfUnitsSold = sellUnits * avgPrice;
+                    
+                    cash += revenue;
+                    realizedPnL += (revenue - costOfUnitsSold);
+                    costBasis -= costOfUnitsSold;
+                    units -= sellUnits;
+                    
+                    avgPrice = units > 0 ? costBasis / units : 0;
+                }
+            });
+
+            // Apply sequence: Stop Loss
+            if (item.slExecuted) {
+                if (units > 0) {
+                    const revenue = units * item.stopLoss;
+                    const costOfUnitsSold = units * avgPrice;
+                    
+                    cash += revenue;
+                    realizedPnL += (revenue - costOfUnitsSold);
+                    costBasis = 0;
+                    units = 0;
+                    avgPrice = 0;
+                }
+            }
+
+            return {
+                ...item,
+                stepDetails,
+                tpDetails,
+                cash,
+                units,
+                costBasis,
+                realizedPnL,
+                avgPrice,
+                activeBuysCount,
+                totalPlannedUnits,
+                slExecuted: !!item.slExecuted
+            };
+        }
+
+        function toggleStepInPortfolio(itemId, stepNum) {
+            const portfolio = getPortfolio();
+            const idx = portfolio.findIndex(x => x.id === itemId);
+            if (idx === -1) return;
+
+            let item = portfolio[idx];
+            if (!item.executedSteps) item.executedSteps = [];
+
+            if (item.executedSteps.includes(stepNum)) {
+                // If removing buy step, ensure no dependent TP has been executed
+                item.executedSteps = item.executedSteps.filter(s => s !== stepNum);
+            } else {
+                item.executedSteps.push(stepNum);
+                item.executedSteps.sort((a,b) => a-b);
+            }
+
+            portfolio[idx] = item;
+            savePortfolio(portfolio);
+            renderPortfolio();
+        }
+
+        function toggleTpInPortfolio(itemId, tpNum) {
+            const portfolio = getPortfolio();
+            const idx = portfolio.findIndex(x => x.id === itemId);
+            if (idx === -1) return;
+
+            let item = portfolio[idx];
+            if (!item.executedTps) item.executedTps = [];
+
+            if (item.executedTps.includes(tpNum)) {
+                item.executedTps = item.executedTps.filter(t => t !== tpNum);
+            } else {
+                item.executedTps.push(tpNum);
+                item.executedTps.sort((a,b) => a-b);
+            }
+
+            portfolio[idx] = item;
+            savePortfolio(portfolio);
+            renderPortfolio();
+        }
+
+        function toggleSlInPortfolio(itemId) {
+            const portfolio = getPortfolio();
+            const idx = portfolio.findIndex(x => x.id === itemId);
+            if (idx === -1) return;
+
+            portfolio[idx].slExecuted = !portfolio[idx].slExecuted;
+            savePortfolio(portfolio);
+            renderPortfolio();
+        }
+
+        function deleteFromPortfolio(itemId) {
+            let portfolio = getPortfolio();
+            portfolio = portfolio.filter(x => x.id !== itemId);
+            savePortfolio(portfolio);
+            renderPortfolio();
+        }
+
+        function renderPortfolio() {
+            const container = document.getElementById('portfolio-items-list');
+            if (!container) return;
+
+            const portfolio = getPortfolio();
+            const tc = parseFloat(document.getElementById('global-tc').value) || 1200;
+
+            if (portfolio.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-slate-900 border border-slate-850 p-8 rounded-2xl text-center flex flex-col items-center gap-3">
+                        <div class="p-4 bg-slate-950 rounded-full text-slate-600">
+                            <i class="fa-solid fa-folder-open fa-3x"></i>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-300">Tu Cartera está vacía</h4>
+                        <p class="text-xs text-slate-500 max-w-sm">Ve a la pestaña del planificador, diseña una simulación a tu gusto y haz clic en el botón de "Ejecutar" en tu Historial para agregarla aquí.</p>
+                    </div>
+                `;
+                // Clear Portfolio Header Cards
+                document.getElementById('port-total-capital').innerText = formatMoney(0);
+                document.getElementById('port-invested-capital').innerText = formatMoney(0);
+                document.getElementById('port-liquidity').innerText = formatMoney(0);
+                document.getElementById('port-realized-pnl').innerText = formatMoney(0);
+                document.getElementById('port-realized-pnl-pct').innerText = '0.00%';
+                return;
+            }
+
+            // Global Metrics Accumulators
+            let globalTotalCapital = 0; 
+            let globalInvestedCapital = 0; 
+            let globalLiquidity = 0; 
+            let globalRealizedPnL = 0; 
+
+            container.innerHTML = '';
+
+            portfolio.forEach(rawItem => {
+                const item = calculatePortfolioItemDetails(rawItem);
+                
+                // Conversions for item currency versus active global currency
+                let itemTotal = item.totalCapital;
+                let itemInvested = item.costBasis;
+                let itemCash = item.cash;
+                let itemPnL = item.realizedPnL;
+
+                if (item.currency !== globalCurrency) {
+                    if (item.currency === 'USD' && globalCurrency === 'ARS') {
+                        itemTotal *= tc;
+                        itemInvested *= tc;
+                        itemCash *= tc;
+                        itemPnL *= tc;
+                    } else if (item.currency === 'ARS' && globalCurrency === 'USD') {
+                        itemTotal /= tc;
+                        itemInvested /= tc;
+                        itemCash /= tc;
+                        itemPnL /= tc;
+                    }
+                }
+
+                globalTotalCapital += itemTotal;
+                globalInvestedCapital += itemInvested;
+                globalLiquidity += itemCash;
+                globalRealizedPnL += itemPnL;
+
+                // Create Card Element
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5";
+
+                // Progress percentage for visual aid
+                const progressPct = (item.activeBuysCount / item.stepsCount) * 100;
+
+                // Render DCA Steps checkbox elements
+                let buysHtml = '';
+                item.stepDetails.forEach(step => {
+                    const isChecked = step.executed;
+                    const colorClass = isChecked 
+                        ? 'bg-blue-600 hover:bg-blue-500 border-blue-500 text-white' 
+                        : 'bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-500';
+                    const labelStyle = isChecked ? 'text-slate-200 line-through' : 'text-slate-400';
+                    
+                    buysHtml += `
+                        <button onclick="toggleStepInPortfolio(${item.id}, ${step.step})" class="w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-all ${colorClass}">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] font-bold uppercase ${isChecked ? 'text-blue-200' : 'text-slate-500'}">Piso ${step.step}</span>
+                                <span class="text-xs font-mono font-bold">${formatMoney(step.price, item.currency)}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-mono">${formatMoney(step.capital, item.currency)}</span>
+                                <i class="fa-solid ${isChecked ? 'fa-square-check' : 'fa-square'} text-sm"></i>
+                            </div>
+                        </button>
+                    `;
+                });
+
+                // Render Take Profits elements
+                let tpsHtml = '';
+                item.tpDetails.forEach(tp => {
+                    const isChecked = tp.executed;
+                    const canExecute = item.units > 0 || isChecked;
+                    const statusClass = isChecked
+                        ? 'bg-purple-600 hover:bg-purple-500 border-purple-500 text-white'
+                        : canExecute 
+                            ? 'bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-400' 
+                            : 'bg-slate-950 opacity-40 cursor-not-allowed border-slate-900 text-slate-600';
+                    
+                    tpsHtml += `
+                        <button ${canExecute ? '' : 'disabled'} onclick="toggleTpInPortfolio(${item.id}, ${tp.tp})" class="w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-all ${statusClass}">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] font-bold uppercase ${isChecked ? 'text-purple-200' : 'text-slate-500'}">Objetivo TP ${tp.tp} (${tp.pct}%)</span>
+                                <span class="text-xs font-mono font-bold">${formatMoney(tp.price, item.currency)}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <i class="fa-solid ${isChecked ? 'fa-square-check' : 'fa-square'} text-sm"></i>
+                            </div>
+                        </button>
+                    `;
+                });
+
+                // Stop Loss Section
+                const slClass = item.slExecuted
+                    ? 'bg-red-600 text-white border-red-500 hover:bg-red-500'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-850';
+
+                // Realized PnL formatting for the specific item
+                const pnlClass = item.realizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400';
+                const pnlSign = item.realizedPnL >= 0 ? '+' : '';
+
+                card.innerHTML = `
+                    <!-- Item Header -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-slate-800 p-2.5 rounded-xl text-slate-300 font-extrabold text-sm tracking-wider w-12 h-12 flex items-center justify-center">
+                                ${item.ticker}
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                                    ${item.name}
+                                    <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-semibold">${item.currency}</span>
+                                </h4>
+                                <p class="text-[11px] text-slate-500">Plan de ${item.stepsCount} niveles • Presupuesto: ${formatMoney(item.totalCapital, item.currency)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right">
+                                <span class="block text-[10px] text-slate-500 uppercase font-semibold">Progreso Ejecutado</span>
+                                <div class="w-24 bg-slate-950 h-2 rounded-full overflow-hidden mt-1 inline-block border border-slate-850">
+                                    <div class="bg-blue-500 h-full transition-all" style="width: ${progressPct}%"></div>
+                                </div>
+                                <span class="text-xs font-bold text-slate-300 ml-1.5 font-mono">${item.activeBuysCount}/${item.stepsCount}</span>
+                            </div>
+                            <button onclick="deleteFromPortfolio(${item.id})" class="p-2 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded-xl transition-all border border-transparent hover:border-red-500/10" title="Eliminar de Cartera">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Item Core Content Split Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+                        
+                        <!-- Left Stats Panel -->
+                        <div class="md:col-span-4 bg-slate-950/40 border border-slate-850 p-4 rounded-xl flex flex-col justify-between gap-4">
+                            <div class="flex flex-col gap-3">
+                                <h5 class="text-xs font-bold text-slate-400 border-b border-slate-900 pb-1.5 uppercase tracking-wider">Métricas Activas</h5>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">Precio de Compra Promedio:</span>
+                                    <span class="font-bold text-slate-200 font-mono">${formatMoney(item.avgPrice, item.currency)}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">Unidades Acumuladas:</span>
+                                    <span class="font-bold text-slate-200 font-mono">${item.units.toLocaleString('es-AR', { maximumFractionDigits: 6 })}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">Capital Comprometido:</span>
+                                    <span class="font-bold text-slate-300 font-mono">${formatMoney(item.costBasis, item.currency)}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">Efectivo No Utilizado:</span>
+                                    <span class="font-bold text-slate-300 font-mono">${formatMoney(item.cash, item.currency)}</span>
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-slate-900 flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">P&L Realizado:</span>
+                                <span class="text-xs font-extrabold font-mono ${pnlClass}">
+                                    ${pnlSign}${formatMoney(item.realizedPnL, item.currency)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Center DCA Purchases Checks Panel -->
+                        <div class="md:col-span-4 flex flex-col gap-2.5">
+                            <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-cart-shopping text-blue-500"></i> Ejecución de Compras
+                            </h5>
+                            <div class="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
+                                ${buysHtml}
+                            </div>
+                        </div>
+
+                        <!-- Right DCA Sales & Exit Checks Panel -->
+                        <div class="md:col-span-4 flex flex-col gap-2.5 justify-between">
+                            <div class="flex flex-col gap-2.5">
+                                <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="fa-solid fa-sack-dollar text-purple-500"></i> Ejecución de Ventas (TP)
+                                </h5>
+                                <div class="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1">
+                                    ${tpsHtml}
+                                </div>
+                            </div>
+                            
+                            <!-- Stop Loss Panic Button -->
+                            <div class="pt-3">
+                                <button onclick="toggleSlInPortfolio(${item.id})" class="w-full p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${slClass}">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
+                                        <span>Detener Pérdida (Stop Loss)</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[10px] font-mono">${formatMoney(item.stopLoss, item.currency)}</span>
+                                        <i class="fa-solid ${item.slExecuted ? 'fa-check-double' : 'fa-circle-xmark'}"></i>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Update Portfolio Global Dashboard Card Elements
+            document.getElementById('port-total-capital').innerText = formatMoney(globalTotalCapital);
+            document.getElementById('port-invested-capital').innerText = formatMoney(globalInvestedCapital);
+            document.getElementById('port-liquidity').innerText = formatMoney(globalLiquidity);
+
+            const pnlSignGlobal = globalRealizedPnL >= 0 ? '+' : '';
+            const pnlGlobalColor = globalRealizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400';
+            const globalPnLCard = document.getElementById('port-realized-pnl');
+            globalPnLCard.innerText = `${pnlSignGlobal}${formatMoney(globalRealizedPnL)}`;
+            globalPnLCard.className = `text-lg font-extrabold ${pnlGlobalColor}`;
+
+            const globalPnLPct = globalTotalCapital > 0 ? (globalRealizedPnL / globalTotalCapital) * 100 : 0;
+            const globalPnLPctEl = document.getElementById('port-realized-pnl-pct');
+            globalPnLPctEl.innerText = `${pnlSignGlobal}${globalPnLPct.toFixed(2)}% del capital total`;
+            globalPnLPctEl.className = `text-[10px] font-semibold ${globalRealizedPnL >= 0 ? 'text-emerald-500' : 'text-red-500'}`;
+        }
+
         function exportCSV() {
             if (ladderData.length === 0) return;
 
@@ -1120,16 +1541,17 @@
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
             link.setAttribute("download", `Escalera_DCA_${ticker}.csv`);
-            document.body.appendChild(link); // Required for FF
+            document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
-        // Initialize calculations on window loaded
         window.onload = function() {
             toggleTPFields();
             calculateLadder();
             renderSavedList();
+            updatePortfolioBadge();
+            renderPortfolio();
         }
     </script>
 </body>
