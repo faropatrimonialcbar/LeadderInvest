@@ -198,6 +198,68 @@
                 </button>
             </div>
 
+            <!-- Take Profit Configuration Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="text-md font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-crosshairs text-purple-500"></i> Salida Escalonada (Take Profit)
+                    </h2>
+                    <select id="tp-count" onchange="toggleTPFields(); calculateLadder();" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+                        <option value="1">1 Objetivo</option>
+                        <option value="2">2 Objetivos</option>
+                        <option value="3" selected>3 Objetivos</option>
+                    </select>
+                </div>
+
+                <p class="text-slate-400 text-[11px]">Define los niveles de salida y el porcentaje del total de tus activos a vender en cada nivel.</p>
+
+                <div class="flex flex-col gap-3">
+                    <!-- TP 1 -->
+                    <div id="tp-row-1" class="grid grid-cols-12 gap-3 items-center">
+                        <div class="col-span-3 text-xs font-medium text-slate-400">TP 1:</div>
+                        <div class="col-span-5 relative">
+                            <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
+                            <input type="number" id="tp-price-1" value="70000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div class="col-span-4 relative flex items-center gap-1">
+                            <input type="number" id="tp-pct-1" value="50" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
+                            <span class="text-xs text-slate-500">%</span>
+                        </div>
+                    </div>
+
+                    <!-- TP 2 -->
+                    <div id="tp-row-2" class="grid grid-cols-12 gap-3 items-center">
+                        <div class="col-span-3 text-xs font-medium text-slate-400">TP 2:</div>
+                        <div class="col-span-5 relative">
+                            <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
+                            <input type="number" id="tp-price-2" value="75000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div class="col-span-4 relative flex items-center gap-1">
+                            <input type="number" id="tp-pct-2" value="30" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
+                            <span class="text-xs text-slate-500">%</span>
+                        </div>
+                    </div>
+
+                    <!-- TP 3 -->
+                    <div id="tp-row-3" class="grid grid-cols-12 gap-3 items-center">
+                        <div class="col-span-3 text-xs font-medium text-slate-400">TP 3:</div>
+                        <div class="col-span-5 relative">
+                            <span class="absolute left-2.5 top-2 text-[10px] text-slate-500 currency-symbol">U$S</span>
+                            <input type="number" id="tp-price-3" value="80000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-1 py-1.5 text-xs text-purple-300 font-semibold focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div class="col-span-4 relative flex items-center gap-1">
+                            <input type="number" id="tp-pct-3" value="20" min="0" max="100" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-right text-slate-200 font-mono">
+                            <span class="text-xs text-slate-500">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TP Warnings / Status -->
+                <div id="tp-sum-status" class="text-[11px] font-medium p-2 rounded-xl text-center transition-all bg-slate-950 text-slate-400">
+                    Distribución total: <span id="tp-pct-sum" class="font-bold text-slate-200">100%</span>
+                </div>
+            </div>
+
             <!-- Saved Scenarios Box -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                 <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center justify-between">
@@ -260,15 +322,59 @@
                 </div>
             </div>
 
+            <!-- Target Exit Dashboard Metrics -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <!-- Card 5: Weighted Exit Price (Take Profit) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-map-pin fa-3x"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Venta Promedio</span>
+                    <span id="summary-tp-avg-price" class="text-lg font-extrabold text-slate-50">--</span>
+                    <span id="summary-tp-diff-avg" class="text-[10px] text-slate-400">-- del promedio</span>
+                </div>
+
+                <!-- Card 6: Estimated Revenue -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-sack-dollar fa-3x"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Retorno Estimado</span>
+                    <span id="summary-tp-revenue" class="text-lg font-extrabold text-slate-50">--</span>
+                    <span id="summary-tp-revenue-converted" class="text-[10px] text-slate-400">--</span>
+                </div>
+
+                <!-- Card 7: Total Projections -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-vault fa-3x"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Ganancia Teórica</span>
+                    <span id="summary-tp-profit" class="text-lg font-extrabold text-emerald-400">--</span>
+                    <span id="summary-tp-profit-pct" class="text-[10px] text-emerald-500 font-semibold">-- de retorno</span>
+                </div>
+
+                <!-- Card 8: Risk-Reward Ratio (R:R Ratio) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-scale-balanced fa-3x"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Relación R:R</span>
+                    <span id="summary-rr-ratio" class="text-lg font-extrabold text-amber-400">--</span>
+                    <span id="summary-rr-badge" class="text-[10px] text-slate-400">Estadística de Riesgo</span>
+                </div>
+            </div>
+
             <!-- Visual Chart Block -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                     <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
                         <i class="fa-solid fa-chart-area text-blue-400"></i> Gráfico de Escalonamiento de Precios
                     </h3>
-                    <div class="flex items-center gap-4 text-xs">
+                    <div class="flex flex-wrap items-center gap-4 text-[11px]">
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Entrada</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Promedio</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Prom. Compra</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span> Prom. Venta</span>
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Stop Loss</span>
                     </div>
                 </div>
@@ -339,6 +445,13 @@
             return `${sym} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
         }
 
+        // Toggle active input rows based on selected TPs count
+        function toggleTPFields() {
+            const count = parseInt(document.getElementById('tp-count').value);
+            document.getElementById('tp-row-2').style.display = count >= 2 ? 'flex' : 'none';
+            document.getElementById('tp-row-3').style.display = count === 3 ? 'flex' : 'none';
+        }
+
         // Toggle currency mode globally
         function setGlobalCurrency(currency) {
             const prevCurrency = globalCurrency;
@@ -359,17 +472,22 @@
 
             // Convert core input values automatically to stay consistent with previous value
             const tc = parseFloat(document.getElementById('global-tc').value) || 1200;
-            const elementsToConvert = ['market-price', 'stop-loss', 'total-capital', 'min-entry-price'];
+            const elementsToConvert = [
+                'market-price', 'stop-loss', 'total-capital', 'min-entry-price',
+                'tp-price-1', 'tp-price-2', 'tp-price-3'
+            ];
             
             elementsToConvert.forEach(id => {
                 const input = document.getElementById(id);
-                let val = parseFloat(input.value) || 0;
-                if (prevCurrency === 'USD' && currency === 'ARS') {
-                    // Convert USD values to ARS
-                    input.value = (val * tc).toFixed(3);
-                } else if (prevCurrency === 'ARS' && currency === 'USD') {
-                    // Convert ARS values to USD
-                    input.value = (val / tc).toFixed(3);
+                if (input) {
+                    let val = parseFloat(input.value) || 0;
+                    if (prevCurrency === 'USD' && currency === 'ARS') {
+                        // Convert USD values to ARS
+                        input.value = (val * tc).toFixed(3);
+                    } else if (prevCurrency === 'ARS' && currency === 'USD') {
+                        // Convert ARS values to USD
+                        input.value = (val / tc).toFixed(3);
+                    }
                 }
             });
 
@@ -395,7 +513,7 @@
             calculateLadder();
         }
 
-        // Main Core Logic: Compute DCA Levels
+        // Main Core Logic: Compute DCA Levels and TP Targets
         function calculateLadder() {
             // Read all inputs
             const ticker = document.getElementById('asset-ticker').value.toUpperCase() || 'ACTIVO';
@@ -441,13 +559,11 @@
                     prices.push(marketPrice - i * diff);
                 }
             } else if (priceDistType === 'logarithmic') {
-                // Front-loaded prices: tightly clustered near marketPrice, expanding gaps downwards
                 for (let i = 0; i < stepsCount; i++) {
                     const pct = Math.log(1 + (i / (stepsCount - 1)) * (Math.E - 1));
                     prices.push(marketPrice - pct * (marketPrice - minEntryPrice));
                 }
             } else if (priceDistType === 'exponential') {
-                // Expands gaps early, tightens near bottom
                 for (let i = 0; i < stepsCount; i++) {
                     const pct = (Math.pow(2, i / (stepsCount - 1)) - 1);
                     prices.push(marketPrice - pct * (marketPrice - minEntryPrice));
@@ -459,19 +575,16 @@
             if (capDistType === 'equal') {
                 weights = Array(stepsCount).fill(1);
             } else if (capDistType === 'martingale') {
-                // Dynamic geometric weight multiplication for progressive buy-in (multiplier ~ 1.5)
                 const baseMultiplier = 1.5;
                 for (let i = 0; i < stepsCount; i++) {
                     weights.push(Math.pow(baseMultiplier, i));
                 }
             } else if (capDistType === 'inverse_martingale') {
-                // Higher allocation at the beginning (pyramiding on high levels)
                 const baseMultiplier = 1.5;
                 for (let i = 0; i < stepsCount; i++) {
                     weights.push(Math.pow(baseMultiplier, stepsCount - 1 - i));
                 }
             } else if (capDistType === 'exponential') {
-                // Strongly progressive allocation doubling size per level
                 for (let i = 0; i < stepsCount; i++) {
                     weights.push(Math.pow(2, i));
                 }
@@ -519,13 +632,59 @@
                 });
             }
 
-            // Global totals
+            // Global entry totals
             const avgAcquiredPrice = cumulativeCapital / cumulativeUnits;
             const maxRiskAmount = cumulativeCapital - (cumulativeUnits * stopLoss);
             const maxRiskPct = (maxRiskAmount / totalCapital) * 100;
             const diffMarketAvg = ((avgAcquiredPrice - marketPrice) / marketPrice) * 100;
 
-            // Render details to cards
+            // 4. Calculate Take Profit Metrics
+            const tpCount = parseInt(document.getElementById('tp-count').value);
+            let tpPrices = [];
+            let tpPcts = [];
+
+            if (tpCount >= 1) {
+                tpPrices.push(parseFloat(document.getElementById('tp-price-1').value) || 0);
+                tpPcts.push(parseFloat(document.getElementById('tp-pct-1').value) || 0);
+            }
+            if (tpCount >= 2) {
+                tpPrices.push(parseFloat(document.getElementById('tp-price-2').value) || 0);
+                tpPcts.push(parseFloat(document.getElementById('tp-pct-2').value) || 0);
+            }
+            if (tpCount === 3) {
+                tpPrices.push(parseFloat(document.getElementById('tp-price-3').value) || 0);
+                tpPcts.push(parseFloat(document.getElementById('tp-pct-3').value) || 0);
+            }
+
+            const totalTpPct = tpPcts.reduce((acc, curr) => acc + curr, 0);
+            const tpStatusEl = document.getElementById('tp-sum-status');
+            const tpPctSumEl = document.getElementById('tp-pct-sum');
+            tpPctSumEl.innerText = `${totalTpPct}%`;
+
+            if (totalTpPct !== 100) {
+                tpStatusEl.className = "text-[11px] font-semibold p-2 rounded-xl text-center bg-red-500/15 text-red-400 border border-red-500/10";
+            } else {
+                tpStatusEl.className = "text-[11px] font-semibold p-2 rounded-xl text-center bg-emerald-500/15 text-emerald-400 border border-emerald-500/10";
+            }
+
+            // Calculate weighted sell price & metrics
+            let weightedSellPrice = 0;
+            let totalRevenue = 0;
+            
+            for (let i = 0; i < tpPrices.length; i++) {
+                const ratio = tpPcts[i] / 100;
+                weightedSellPrice += tpPrices[i] * ratio;
+                totalRevenue += (cumulativeUnits * ratio) * tpPrices[i];
+            }
+
+            const totalProfit = totalRevenue - cumulativeCapital;
+            const totalProfitPct = (totalProfit / cumulativeCapital) * 100;
+            const diffTpAvg = ((weightedSellPrice - avgAcquiredPrice) / avgAcquiredPrice) * 100;
+            
+            // Risk-to-Reward Ratio (R:R)
+            const rrRatioVal = maxRiskAmount > 0 ? (totalProfit / maxRiskAmount) : 0;
+
+            // Render Entry details to cards
             document.getElementById('summary-avg-price').innerText = formatMoney(avgAcquiredPrice);
             document.getElementById('summary-avg-diff-market').innerText = `${diffMarketAvg >= 0 ? '+' : ''}${diffMarketAvg.toFixed(2)}%`;
             document.getElementById('summary-avg-diff-market').className = `text-[10px] font-bold ${diffMarketAvg <= 0 ? 'text-emerald-400' : 'text-amber-400'}`;
@@ -541,11 +700,28 @@
             document.getElementById('summary-sl-risk').innerText = formatMoney(maxRiskAmount);
             document.getElementById('summary-sl-risk-pct').innerText = `${maxRiskPct.toFixed(2)}% de tu capital`;
 
+            // Render Take Profit details to cards
+            document.getElementById('summary-tp-avg-price').innerText = formatMoney(weightedSellPrice);
+            document.getElementById('summary-tp-diff-avg').innerText = `${diffTpAvg >= 0 ? '+' : ''}${diffTpAvg.toFixed(2)}% del promedio`;
+            document.getElementById('summary-tp-diff-avg').className = `text-[10px] font-bold ${diffTpAvg >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+
+            document.getElementById('summary-tp-revenue').innerText = formatMoney(totalRevenue);
+            const totalRevenueConverted = globalCurrency === 'USD' ? totalRevenue * tc : totalRevenue / tc;
+            document.getElementById('summary-tp-revenue-converted').innerText = `≈ ${formatMoney(totalRevenueConverted, otherCurr)}`;
+
+            document.getElementById('summary-tp-profit').innerText = formatMoney(totalProfit);
+            document.getElementById('summary-tp-profit-pct').innerText = `${totalProfitPct >= 0 ? '+' : ''}${totalProfitPct.toFixed(2)}%`;
+            document.getElementById('summary-tp-profit-pct').className = `text-[10px] font-bold ${totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+
+            document.getElementById('summary-rr-ratio').innerText = `1 : ${rrRatioVal.toFixed(2)}`;
+            document.getElementById('summary-rr-badge').innerText = rrRatioVal >= 2 ? "Favorable (> 1:2)" : "Poco Favorable (< 1:2)";
+            document.getElementById('summary-rr-badge').className = `text-[10px] font-semibold ${rrRatioVal >= 2 ? 'text-emerald-400' : 'text-amber-500'}`;
+
             // Draw and render the data table
             renderTable();
 
             // Refresh analytical charts
-            renderChart(marketPrice, stopLoss, avgAcquiredPrice);
+            renderChart(marketPrice, stopLoss, avgAcquiredPrice, weightedSellPrice, tpPrices, tpPcts);
         }
 
         function renderTable() {
@@ -575,7 +751,7 @@
             });
         }
 
-        function renderChart(marketPrice, stopLoss, averagePrice) {
+        function renderChart(marketPrice, stopLoss, averagePrice, weightedSellPrice, tpPrices = [], tpPcts = []) {
             const ctx = document.getElementById('ladderChart').getContext('2d');
             
             // Map data for graph labels and datasets
@@ -584,7 +760,7 @@
             const sizes = ladderData.map(item => item.capital);
 
             // Compute ideal scales (padding values)
-            const allPrices = [...prices, marketPrice, stopLoss, averagePrice];
+            const allPrices = [...prices, marketPrice, stopLoss, averagePrice, weightedSellPrice, ...tpPrices];
             const maxVal = Math.max(...allPrices) * 1.05;
             const minVal = Math.min(...allPrices) * 0.95;
 
@@ -672,15 +848,14 @@
                     }
                 },
                 plugins: [{
-                    // Drawing custom horizontal support levels dynamically on the canvas layer
                     id: 'horizontalLines',
                     afterDraw: function(chart) {
                         const {ctx, chartArea: {left, right}, scales: {y}} = chart;
                         ctx.save();
 
-                        // 1. Draw Average Price Line
+                        // 1. Draw Average Entry Price Line
                         const avgY = y.getPixelForValue(averagePrice);
-                        ctx.strokeStyle = '#10b981'; // Green
+                        ctx.strokeStyle = '#10b981'; // Emerald Green
                         ctx.lineWidth = 2;
                         ctx.setLineDash([6, 4]);
                         ctx.beginPath();
@@ -688,10 +863,9 @@
                         ctx.lineTo(right, avgY);
                         ctx.stroke();
 
-                        // Label for average
                         ctx.fillStyle = '#10b981';
-                        ctx.font = 'bold 10px Inter';
-                        ctx.fillText(`PROM: ${averagePrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, avgY - 5);
+                        ctx.font = 'bold 9px Inter';
+                        ctx.fillText(`PROM. COMPRA: ${averagePrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, avgY - 5);
 
                         // 2. Draw Stop Loss Line
                         const slY = y.getPixelForValue(stopLoss);
@@ -703,9 +877,8 @@
                         ctx.lineTo(right, slY);
                         ctx.stroke();
 
-                        // Label for stop loss
                         ctx.fillStyle = '#ef4444';
-                        ctx.font = 'bold 10px Inter';
+                        ctx.font = 'bold 9px Inter';
                         ctx.fillText(`STOP LOSS: ${stopLoss.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, slY - 5);
 
                         // 3. Draw Market Price Line
@@ -719,8 +892,40 @@
                         ctx.stroke();
 
                         ctx.fillStyle = '#94a3b8';
-                        ctx.font = '10px Inter';
+                        ctx.font = '9px Inter';
                         ctx.fillText(`MERCADO: ${marketPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, right - 90, mktY - 5);
+
+                        // 4. Draw Weighted Sell Price (Take Profit Average)
+                        const tpAvgY = y.getPixelForValue(weightedSellPrice);
+                        ctx.strokeStyle = '#8b5cf6'; // Indigo/Purple
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([6, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(left, tpAvgY);
+                        ctx.lineTo(right, tpAvgY);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#a78bfa';
+                        ctx.font = 'bold 9px Inter';
+                        ctx.fillText(`VENTA PROMEDIO: ${weightedSellPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, tpAvgY - 5);
+
+                        // 5. Draw Individual TP Goals
+                        tpPrices.forEach((tpPrice, idx) => {
+                            if (tpPrice > 0) {
+                                const tpY = y.getPixelForValue(tpPrice);
+                                ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)'; // Soft Purple
+                                ctx.lineWidth = 1;
+                                ctx.setLineDash([3, 3]);
+                                ctx.beginPath();
+                                ctx.moveTo(left, tpY);
+                                ctx.lineTo(right, tpY);
+                                ctx.stroke();
+
+                                ctx.fillStyle = 'rgba(167, 139, 250, 0.75)';
+                                ctx.font = '9px Inter';
+                                ctx.fillText(`TP ${idx + 1} (${tpPcts[idx]}%): ${tpPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, right - 110, tpY - 5);
+                            }
+                        });
 
                         ctx.restore();
                     }
@@ -747,6 +952,15 @@
             const capDistType = document.getElementById('capital-dist-type').value;
             const priceDistType = document.getElementById('price-dist-type').value;
 
+            // TP state parameters saved
+            const tpCount = parseInt(document.getElementById('tp-count').value);
+            const tpPrice1 = parseFloat(document.getElementById('tp-price-1').value) || 0;
+            const tpPct1 = parseFloat(document.getElementById('tp-pct-1').value) || 0;
+            const tpPrice2 = parseFloat(document.getElementById('tp-price-2').value) || 0;
+            const tpPct2 = parseFloat(document.getElementById('tp-pct-2').value) || 0;
+            const tpPrice3 = parseFloat(document.getElementById('tp-price-3').value) || 0;
+            const tpPct3 = parseFloat(document.getElementById('tp-pct-3').value) || 0;
+
             if (!ticker || totalCapital <= 0) {
                 return;
             }
@@ -762,6 +976,13 @@
                 minEntryPrice,
                 capDistType,
                 priceDistType,
+                tpCount,
+                tpPrice1,
+                tpPct1,
+                tpPrice2,
+                tpPct2,
+                tpPrice3,
+                tpPct3,
                 currency: globalCurrency,
                 timestamp: new Date().toLocaleDateString('es-AR')
             };
@@ -809,6 +1030,18 @@
             document.getElementById('capital-dist-type').value = scenario.capDistType;
             document.getElementById('price-dist-type').value = scenario.priceDistType;
 
+            // Load TPs parameters if exists
+            if (scenario.tpCount !== undefined) {
+                document.getElementById('tp-count').value = scenario.tpCount;
+                document.getElementById('tp-price-1').value = scenario.tpPrice1;
+                document.getElementById('tp-pct-1').value = scenario.tpPct1;
+                document.getElementById('tp-price-2').value = scenario.tpPrice2;
+                document.getElementById('tp-pct-2').value = scenario.tpPct2;
+                document.getElementById('tp-price-3').value = scenario.tpPrice3;
+                document.getElementById('tp-pct-3').value = scenario.tpPct3;
+            }
+
+            toggleTPFields();
             calculateLadder();
         }
 
@@ -894,6 +1127,7 @@
 
         // Initialize calculations on window loaded
         window.onload = function() {
+            toggleTPFields();
             calculateLadder();
             renderSavedList();
         }
