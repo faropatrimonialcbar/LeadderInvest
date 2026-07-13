@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Entradas Escalonadas</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js para Visualización -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styling scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header/Navigation -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-xl text-white shadow-lg shadow-blue-500/20">
+                    <i class="fa-solid fa-chart-line-up fa-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                        LadderInvest
+                    </h1>
+                    <p class="text-xs text-slate-400">Planificador de Entrada Escalonada y Gestión de Riesgo</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- Global Currency Switcher -->
+                <div class="bg-slate-800 p-1 rounded-xl flex items-center border border-slate-700">
+                    <button id="btn-global-usd" onclick="setGlobalCurrency('USD')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-600 text-white shadow">
+                        USD
+                    </button>
+                    <button id="btn-global-ars" onclick="setGlobalCurrency('ARS')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+                        ARS
+                    </button>
+                </div>
+                <!-- Exchange Rate Indicator -->
+                <div class="hidden sm:flex flex-col text-right text-xs">
+                    <span class="text-slate-400">Tipo de Cambio USD/ARS</span>
+                    <div class="flex items-center gap-1 font-semibold text-slate-200">
+                        <span>$</span>
+                        <input type="number" id="global-tc" value="1250" onchange="calculateLadder()" class="bg-transparent border-b border-slate-700 hover:border-slate-500 focus:border-blue-500 text-right w-16 focus:outline-none focus:ring-0 p-0 text-xs font-bold text-blue-400">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Inputs & Parameters (5 Columns) -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Parameters Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <h2 class="text-md font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-blue-500"></i> Parámetros del Activo
+                    </h2>
+                    <span class="px-2 py-1 text-xs font-semibold rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20" id="badge-currency">
+                        Modo: USD
+                    </span>
+                </div>
+
+                <!-- Asset Identification -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Nombre del Activo</label>
+                        <div class="relative">
+                            <input type="text" id="asset-name" value="Bitcoin" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Ticker / Símbolo</label>
+                        <input type="text" id="asset-ticker" value="BTC" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm uppercase text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                    </div>
+                </div>
+
+                <!-- Market Values -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                            Precio de Mercado (<span class="currency-symbol">U$S</span>)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
+                            <input type="number" id="market-price" value="60000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-slate-100 font-semibold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                            Precio Stop Loss (<span class="currency-symbol">U$S</span>)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
+                            <input type="number" id="stop-loss" value="50000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-red-400 font-semibold focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all">
+                        </div>
+                        <p class="text-[10px] text-red-500/80 mt-1 flex items-center gap-1">
+                            <i class="fa-solid fa-triangle-exclamation"></i> El precio de SL debe ser menor al de Mercado.
+                        </p>
+                    </div>
+                </div>
+
+                <hr class="border-slate-800">
+
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-sm font-bold text-slate-200">
+                        Configuración de la Estrategia
+                    </h2>
+                </div>
+
+                <!-- Capital input -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                        Capital Total a Invertir (<span class="currency-symbol">U$S</span>)
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
+                        <input type="number" id="total-capital" value="10000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
+                    </div>
+                </div>
+
+                <!-- Number of entries (Slider and input) -->
+                <div class="grid grid-cols-3 gap-4 items-end">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Cant. de Entradas (Pisos)</label>
+                        <input type="range" id="entry-steps-slider" min="2" max="10" value="5" oninput="updateStepsFromSlider(this.value)" class="w-full accent-blue-500 bg-slate-950 rounded-lg appearance-none h-2 cursor-pointer">
+                    </div>
+                    <div>
+                        <input type="number" id="entry-steps" min="2" max="10" value="5" oninput="updateStepsFromInput(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-center text-slate-100 font-semibold focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- Price distribution bottom range -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                        Precio de la Última Entrada (<span class="currency-symbol">U$S</span>)
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-xs text-slate-500 currency-symbol">U$S</span>
+                        <input type="number" id="min-entry-price" value="52000" step="0.001" oninput="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-sm text-slate-100 font-semibold focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">Debe estar por encima de su Stop Loss para mantener consistencia de riesgo.</p>
+                </div>
+
+                <!-- Distribution Selectors -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Capital distribution -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Distribución Capital</label>
+                        <select id="capital-dist-type" onchange="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                            <option value="equal">Uniforme (Equitativa)</option>
+                            <option value="martingale" selected>Martingala (Progresiva)</option>
+                            <option value="inverse_martingale">Piramidal (Regresiva)</option>
+                            <option value="exponential">Exponencial Agresiva</option>
+                        </select>
+                    </div>
+
+                    <!-- Price distribution -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Distribución Precios</label>
+                        <select id="price-dist-type" onchange="calculateLadder()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                            <option value="linear" selected>Equidistante (Lineal)</option>
+                            <option value="logarithmic">Apretada Arriba (Logarítmica)</option>
+                            <option value="exponential">Espaciada Abajo (Exponencial)</option>
+                            <option value="fixed">Fijo (Mismo precio de entrada)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onclick="saveSimulation()" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all border border-slate-700">
+                    <i class="fa-solid fa-bookmark text-blue-400"></i> Guardar Simulación
+                </button>
+            </div>
+
+            <!-- Saved Scenarios Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-box-archive text-indigo-400"></i> Historial de Simulaciones
+                    </span>
+                    <button onclick="clearAllSimulations()" class="text-[10px] text-red-400 hover:text-red-300">Borrar Todo</button>
+                </h3>
+                <div id="saved-scenarios-list" class="max-h-48 overflow-y-auto flex flex-col gap-2 pr-1">
+                    <!-- Dynamic scenarios list -->
+                    <p class="text-xs text-slate-500 italic text-center py-4">No hay simulaciones guardadas.</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Results & Analytics (7 Columns) -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Quick Summary Dashboard Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <!-- Card 1: Average Price -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-calculator fa-3x"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Precio Promedio</span>
+                    <span id="summary-avg-price" class="text-lg font-extrabold text-slate-50">--</span>
+                    <span id="summary-avg-diff-market" class="text-[10px] text-slate-400">-- del mercado</span>
+                </div>
+
+                <!-- Card 2: Total Units -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-coins fa-3x"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Activos Adquiridos</span>
+                    <span id="summary-total-units" class="text-lg font-extrabold text-slate-50">--</span>
+                    <span id="summary-ticker-badge" class="text-[10px] text-slate-400">--</span>
+                </div>
+
+                <!-- Card 3: Total Spent -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-money-bill-wave fa-3x"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Inversión Realizada</span>
+                    <span id="summary-spent-capital" class="text-lg font-extrabold text-slate-50">--</span>
+                    <span id="summary-spent-converted" class="text-[10px] text-emerald-500 font-semibold">--</span>
+                </div>
+
+                <!-- Card 4: Stop Loss Risk -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-2 -bottom-2 opacity-5 text-slate-200 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-shield-halved fa-3x"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-red-400 uppercase tracking-wider">Pérdida Máxima</span>
+                    <span id="summary-sl-risk" class="text-lg font-extrabold text-red-400">--</span>
+                    <span id="summary-sl-risk-pct" class="text-[10px] text-red-500 font-semibold">-- del capital</span>
+                </div>
+            </div>
+
+            <!-- Visual Chart Block -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-area text-blue-400"></i> Gráfico de Escalonamiento de Precios
+                    </h3>
+                    <div class="flex items-center gap-4 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Entrada</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Promedio</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Stop Loss</span>
+                    </div>
+                </div>
+                <div class="relative w-full h-64 sm:h-80">
+                    <canvas id="ladderChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Execution Ladder Table -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+                <div class="px-5 py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-list-ol text-blue-400"></i> Niveles Detallados de Ejecución
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Coloca órdenes de compra limitadas según este esquema.</p>
+                    </div>
+                    <button onclick="exportCSV()" class="text-xs px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5 self-start sm:self-auto">
+                        <i class="fa-solid fa-file-export text-slate-400"></i> Exportar CSV
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-950/40 border-b border-slate-800 text-[10px] font-bold text-slate-400 tracking-wider">
+                                <th class="py-3 px-4 text-center">Piso #</th>
+                                <th class="py-3 px-4">Precio Entrada</th>
+                                <th class="py-3 px-4 text-right">Monto Asignado</th>
+                                <th class="py-3 px-4 text-right">Monto Convertido</th>
+                                <th class="py-3 px-4 text-right">Cantidad Compra</th>
+                                <th class="py-3 px-4 text-right">Promedio Parcial</th>
+                                <th class="py-3 px-4 text-center">Riesgo a SL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ladder-table-body" class="divide-y divide-slate-850 text-xs">
+                            <!-- Dynamic content generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <p>© 2026 LadderInvest Tools. Todos los cálculos son estimaciones matemáticas financieras.</p>
+            <div class="flex items-center gap-4">
+                <span class="hover:text-slate-300 cursor-pointer">Términos de uso</span>
+                <span class="hover:text-slate-300 cursor-pointer">Gestión de Riesgo</span>
+                <span class="hover:text-slate-300 cursor-pointer">Soporte</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Global State Variables
+        let globalCurrency = 'USD'; // 'USD' or 'ARS'
+        let chartInstance = null;
+        let ladderData = []; // Array of calculated steps
+
+        // Format Helper
+        function formatMoney(amount, currency = globalCurrency) {
+            const sym = currency === 'USD' ? 'U$S' : 'AR$';
+            return `${sym} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
+        }
+
+        // Toggle currency mode globally
+        function setGlobalCurrency(currency) {
+            const prevCurrency = globalCurrency;
+            globalCurrency = currency;
+
+            // Visual updates on UI buttons
+            const btnUsd = document.getElementById('btn-global-usd');
+            const btnArs = document.getElementById('btn-global-ars');
+            if (currency === 'USD') {
+                btnUsd.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-600 text-white shadow";
+                btnArs.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white";
+                document.getElementById('badge-currency').innerText = "Modo: USD";
+            } else {
+                btnArs.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-600 text-white shadow";
+                btnUsd.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white";
+                document.getElementById('badge-currency').innerText = "Modo: ARS";
+            }
+
+            // Convert core input values automatically to stay consistent with previous value
+            const tc = parseFloat(document.getElementById('global-tc').value) || 1200;
+            const elementsToConvert = ['market-price', 'stop-loss', 'total-capital', 'min-entry-price'];
+            
+            elementsToConvert.forEach(id => {
+                const input = document.getElementById(id);
+                let val = parseFloat(input.value) || 0;
+                if (prevCurrency === 'USD' && currency === 'ARS') {
+                    // Convert USD values to ARS
+                    input.value = (val * tc).toFixed(3);
+                } else if (prevCurrency === 'ARS' && currency === 'USD') {
+                    // Convert ARS values to USD
+                    input.value = (val / tc).toFixed(3);
+                }
+            });
+
+            // Update currency symbols inside labels
+            document.querySelectorAll('.currency-symbol').forEach(el => {
+                el.innerText = currency === 'USD' ? 'U$S' : 'AR$';
+            });
+
+            calculateLadder();
+        }
+
+        // Update step inputs synchronized with sliders
+        function updateStepsFromSlider(val) {
+            document.getElementById('entry-steps').value = val;
+            calculateLadder();
+        }
+
+        function updateStepsFromInput(val) {
+            let parsed = parseInt(val) || 2;
+            if (parsed < 2) parsed = 2;
+            if (parsed > 10) parsed = 10;
+            document.getElementById('entry-steps-slider').value = parsed;
+            calculateLadder();
+        }
+
+        // Main Core Logic: Compute DCA Levels
+        function calculateLadder() {
+            // Read all inputs
+            const ticker = document.getElementById('asset-ticker').value.toUpperCase() || 'ACTIVO';
+            const assetName = document.getElementById('asset-name').value || 'Activo Simulado';
+            const marketPrice = parseFloat(document.getElementById('market-price').value) || 0;
+            const stopLoss = parseFloat(document.getElementById('stop-loss').value) || 0;
+            const totalCapital = parseFloat(document.getElementById('total-capital').value) || 0;
+            const stepsCount = parseInt(document.getElementById('entry-steps').value) || 2;
+            const capDistType = document.getElementById('capital-dist-type').value;
+            const priceDistType = document.getElementById('price-dist-type').value;
+            const tc = parseFloat(document.getElementById('global-tc').value) || 1200;
+
+            const minEntryInput = document.getElementById('min-entry-price');
+            if (priceDistType === 'fixed') {
+                minEntryInput.value = marketPrice;
+                minEntryInput.disabled = true;
+                minEntryInput.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                minEntryInput.disabled = false;
+                minEntryInput.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            const minEntryPrice = parseFloat(minEntryInput.value) || 0;
+
+            // Clean error states or bad validations
+            if (marketPrice <= 0 || stopLoss <= 0 || totalCapital <= 0 || minEntryPrice <= 0 || stepsCount < 2) {
+                return; // Silently avoid calculating invalid numbers
+            }
+
+            // Calculation containers
+            const prices = [];
+            const capitalAllocations = [];
+            
+            // 1. Calculate Prices for each Step
+            if (priceDistType === 'fixed') {
+                // Apply the exact same entry price (Market Price) for all steps
+                for (let i = 0; i < stepsCount; i++) {
+                    prices.push(marketPrice);
+                }
+            } else if (priceDistType === 'linear') {
+                const diff = (marketPrice - minEntryPrice) / (stepsCount - 1);
+                for (let i = 0; i < stepsCount; i++) {
+                    prices.push(marketPrice - i * diff);
+                }
+            } else if (priceDistType === 'logarithmic') {
+                // Front-loaded prices: tightly clustered near marketPrice, expanding gaps downwards
+                for (let i = 0; i < stepsCount; i++) {
+                    const pct = Math.log(1 + (i / (stepsCount - 1)) * (Math.E - 1));
+                    prices.push(marketPrice - pct * (marketPrice - minEntryPrice));
+                }
+            } else if (priceDistType === 'exponential') {
+                // Expands gaps early, tightens near bottom
+                for (let i = 0; i < stepsCount; i++) {
+                    const pct = (Math.pow(2, i / (stepsCount - 1)) - 1);
+                    prices.push(marketPrice - pct * (marketPrice - minEntryPrice));
+                }
+            }
+
+            // 2. Calculate Capital Allocations
+            let weights = [];
+            if (capDistType === 'equal') {
+                weights = Array(stepsCount).fill(1);
+            } else if (capDistType === 'martingale') {
+                // Dynamic geometric weight multiplication for progressive buy-in (multiplier ~ 1.5)
+                const baseMultiplier = 1.5;
+                for (let i = 0; i < stepsCount; i++) {
+                    weights.push(Math.pow(baseMultiplier, i));
+                }
+            } else if (capDistType === 'inverse_martingale') {
+                // Higher allocation at the beginning (pyramiding on high levels)
+                const baseMultiplier = 1.5;
+                for (let i = 0; i < stepsCount; i++) {
+                    weights.push(Math.pow(baseMultiplier, stepsCount - 1 - i));
+                }
+            } else if (capDistType === 'exponential') {
+                // Strongly progressive allocation doubling size per level
+                for (let i = 0; i < stepsCount; i++) {
+                    weights.push(Math.pow(2, i));
+                }
+            }
+
+            // Normalize weights to sum up exactly to totalCapital
+            const totalWeights = weights.reduce((acc, curr) => acc + curr, 0);
+            for (let i = 0; i < stepsCount; i++) {
+                capitalAllocations.push((weights[i] / totalWeights) * totalCapital);
+            }
+
+            // 3. Complete Step Calculations
+            ladderData = [];
+            let cumulativeCapital = 0;
+            let cumulativeUnits = 0;
+
+            for (let i = 0; i < stepsCount; i++) {
+                const price = prices[i];
+                const capital = capitalAllocations[i];
+                const units = capital / price;
+                
+                cumulativeCapital += capital;
+                cumulativeUnits += units;
+                const partialAvg = cumulativeCapital / cumulativeUnits;
+                
+                // Converted currency representation
+                const otherCurrency = globalCurrency === 'USD' ? 'ARS' : 'USD';
+                const convertedCapital = globalCurrency === 'USD' ? capital * tc : capital / tc;
+
+                // Stop loss risk for this level
+                const distanceToSL = price > stopLoss ? ((price - stopLoss) / price) * 100 : 0;
+                const levelRiskCapital = price > stopLoss ? (price - stopLoss) * units : 0;
+
+                ladderData.push({
+                    step: i + 1,
+                    price: price,
+                    capital: capital,
+                    convertedCapital: convertedCapital,
+                    units: units,
+                    cumulativeCapital: cumulativeCapital,
+                    cumulativeUnits: cumulativeUnits,
+                    partialAvg: partialAvg,
+                    distanceToSL: distanceToSL,
+                    levelRiskCapital: levelRiskCapital
+                });
+            }
+
+            // Global totals
+            const avgAcquiredPrice = cumulativeCapital / cumulativeUnits;
+            const maxRiskAmount = cumulativeCapital - (cumulativeUnits * stopLoss);
+            const maxRiskPct = (maxRiskAmount / totalCapital) * 100;
+            const diffMarketAvg = ((avgAcquiredPrice - marketPrice) / marketPrice) * 100;
+
+            // Render details to cards
+            document.getElementById('summary-avg-price').innerText = formatMoney(avgAcquiredPrice);
+            document.getElementById('summary-avg-diff-market').innerText = `${diffMarketAvg >= 0 ? '+' : ''}${diffMarketAvg.toFixed(2)}%`;
+            document.getElementById('summary-avg-diff-market').className = `text-[10px] font-bold ${diffMarketAvg <= 0 ? 'text-emerald-400' : 'text-amber-400'}`;
+
+            document.getElementById('summary-total-units').innerText = cumulativeUnits.toLocaleString('es-AR', { maximumFractionDigits: 6 });
+            document.getElementById('summary-ticker-badge').innerText = `Unidades de ${ticker}`;
+
+            document.getElementById('summary-spent-capital').innerText = formatMoney(cumulativeCapital);
+            const otherCurr = globalCurrency === 'USD' ? 'ARS' : 'USD';
+            const cumulativeCapitalConverted = globalCurrency === 'USD' ? cumulativeCapital * tc : cumulativeCapital / tc;
+            document.getElementById('summary-spent-converted').innerText = `≈ ${formatMoney(cumulativeCapitalConverted, otherCurr)}`;
+
+            document.getElementById('summary-sl-risk').innerText = formatMoney(maxRiskAmount);
+            document.getElementById('summary-sl-risk-pct').innerText = `${maxRiskPct.toFixed(2)}% de tu capital`;
+
+            // Draw and render the data table
+            renderTable();
+
+            // Refresh analytical charts
+            renderChart(marketPrice, stopLoss, avgAcquiredPrice);
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById('ladder-table-body');
+            tableBody.innerHTML = '';
+
+            const otherCurrency = globalCurrency === 'USD' ? 'ARS' : 'USD';
+
+            ladderData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/60 transition-colors";
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-center font-bold text-slate-400">${item.step}</td>
+                    <td class="py-3 px-4 font-semibold text-slate-100">${formatMoney(item.price)}</td>
+                    <td class="py-3 px-4 text-right text-slate-300 font-mono">${formatMoney(item.capital)}</td>
+                    <td class="py-3 px-4 text-right text-slate-400 font-mono text-[11px]">${formatMoney(item.convertedCapital, otherCurrency)}</td>
+                    <td class="py-3 px-4 text-right text-amber-300/90 font-mono">${item.units.toLocaleString('es-AR', { maximumFractionDigits: 6 })}</td>
+                    <td class="py-3 px-4 text-right text-emerald-400/90 font-semibold font-mono">${formatMoney(item.partialAvg)}</td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.distanceToSL > 15 ? 'bg-red-500/10 text-red-400' : 'bg-orange-500/10 text-orange-400'}">
+                            -${item.distanceToSL.toFixed(1)}%
+                        </span>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function renderChart(marketPrice, stopLoss, averagePrice) {
+            const ctx = document.getElementById('ladderChart').getContext('2d');
+            
+            // Map data for graph labels and datasets
+            const labels = ladderData.map(item => `Piso ${item.step}`);
+            const prices = ladderData.map(item => item.price);
+            const sizes = ladderData.map(item => item.capital);
+
+            // Compute ideal scales (padding values)
+            const allPrices = [...prices, marketPrice, stopLoss, averagePrice];
+            const maxVal = Math.max(...allPrices) * 1.05;
+            const minVal = Math.min(...allPrices) * 0.95;
+
+            // Destroy previous chart to avoid overlapping glitches
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // Normalizing bubble sizes for display weights
+            const maxCap = Math.max(...sizes);
+            const minCap = Math.min(...sizes);
+            const bubbleSizes = sizes.map(cap => {
+                if (maxCap === minCap) return 12;
+                return 8 + ((cap - minCap) / (maxCap - minCap)) * 14; // Sizes between 8px and 22px
+            });
+
+            const datasetPrices = {
+                label: 'Puntos de Compra',
+                data: prices,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.4)',
+                pointRadius: bubbleSizes,
+                pointHoverRadius: bubbleSizes.map(s => s + 3),
+                showLine: true,
+                borderDash: [5, 5],
+                borderWidth: 1.5,
+                tension: 0.1,
+                yAxisID: 'y'
+            };
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [datasetPrices]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const capitalFormatted = formatMoney(sizes[index]);
+                                    const priceFormatted = formatMoney(prices[index]);
+                                    return ` Entrada ${index + 1}: ${priceFormatted} | Capital: ${capitalFormatted}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: minVal,
+                            max: maxVal,
+                            grid: {
+                                color: 'rgba(51, 65, 85, 0.3)'
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: {
+                                    family: 'Inter',
+                                    size: 10
+                                },
+                                callback: function(value) {
+                                    return value.toLocaleString('es-AR', { maximumFractionDigits: 3 });
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: {
+                                    family: 'Inter',
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    // Drawing custom horizontal support levels dynamically on the canvas layer
+                    id: 'horizontalLines',
+                    afterDraw: function(chart) {
+                        const {ctx, chartArea: {left, right}, scales: {y}} = chart;
+                        ctx.save();
+
+                        // 1. Draw Average Price Line
+                        const avgY = y.getPixelForValue(averagePrice);
+                        ctx.strokeStyle = '#10b981'; // Green
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([6, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(left, avgY);
+                        ctx.lineTo(right, avgY);
+                        ctx.stroke();
+
+                        // Label for average
+                        ctx.fillStyle = '#10b981';
+                        ctx.font = 'bold 10px Inter';
+                        ctx.fillText(`PROM: ${averagePrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, avgY - 5);
+
+                        // 2. Draw Stop Loss Line
+                        const slY = y.getPixelForValue(stopLoss);
+                        ctx.strokeStyle = '#ef4444'; // Red
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(left, slY);
+                        ctx.lineTo(right, slY);
+                        ctx.stroke();
+
+                        // Label for stop loss
+                        ctx.fillStyle = '#ef4444';
+                        ctx.font = 'bold 10px Inter';
+                        ctx.fillText(`STOP LOSS: ${stopLoss.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, slY - 5);
+
+                        // 3. Draw Market Price Line
+                        const mktY = y.getPixelForValue(marketPrice);
+                        ctx.strokeStyle = '#94a3b8'; // Slate
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([2, 2]);
+                        ctx.beginPath();
+                        ctx.moveTo(left, mktY);
+                        ctx.lineTo(right, mktY);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.font = '10px Inter';
+                        ctx.fillText(`MERCADO: ${marketPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, right - 90, mktY - 5);
+
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+
+        // Simulation Preservation Management
+        const storageKey = 'ladder_invest_saved_plans';
+
+        function getSavedSimulations() {
+            const data = localStorage.getItem(storageKey);
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveSimulation() {
+            const ticker = document.getElementById('asset-ticker').value.toUpperCase() || 'ACTIVO';
+            const name = document.getElementById('asset-name').value || 'Activo';
+            const marketPrice = parseFloat(document.getElementById('market-price').value) || 0;
+            const stopLoss = parseFloat(document.getElementById('stop-loss').value) || 0;
+            const totalCapital = parseFloat(document.getElementById('total-capital').value) || 0;
+            const stepsCount = parseInt(document.getElementById('entry-steps').value) || 2;
+            const minEntryPrice = parseFloat(document.getElementById('min-entry-price').value) || 0;
+            const capDistType = document.getElementById('capital-dist-type').value;
+            const priceDistType = document.getElementById('price-dist-type').value;
+
+            if (!ticker || totalCapital <= 0) {
+                return;
+            }
+
+            const payload = {
+                id: Date.now(),
+                ticker,
+                name,
+                marketPrice,
+                stopLoss,
+                totalCapital,
+                stepsCount,
+                minEntryPrice,
+                capDistType,
+                priceDistType,
+                currency: globalCurrency,
+                timestamp: new Date().toLocaleDateString('es-AR')
+            };
+
+            const list = getSavedSimulations();
+            list.unshift(payload); // Add first
+            localStorage.setItem(storageKey, JSON.stringify(list));
+
+            renderSavedList();
+        }
+
+        function loadSimulation(id) {
+            const list = getSavedSimulations();
+            const scenario = list.find(item => item.id === id);
+            if (!scenario) return;
+
+            // Enforce currency mode first
+            if (scenario.currency !== globalCurrency) {
+                globalCurrency = scenario.currency;
+                const btnUsd = document.getElementById('btn-global-usd');
+                const btnArs = document.getElementById('btn-global-ars');
+                if (globalCurrency === 'USD') {
+                    btnUsd.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-600 text-white shadow";
+                    btnArs.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white";
+                    document.getElementById('badge-currency').innerText = "Modo: USD";
+                } else {
+                    btnArs.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-blue-600 text-white shadow";
+                    btnUsd.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white";
+                    document.getElementById('badge-currency').innerText = "Modo: ARS";
+                }
+                document.querySelectorAll('.currency-symbol').forEach(el => {
+                    el.innerText = globalCurrency === 'USD' ? 'U$S' : 'AR$';
+                });
+            }
+
+            // Fill parameters
+            document.getElementById('asset-ticker').value = scenario.ticker;
+            document.getElementById('asset-name').value = scenario.name;
+            document.getElementById('market-price').value = scenario.marketPrice;
+            document.getElementById('stop-loss').value = scenario.stopLoss;
+            document.getElementById('total-capital').value = scenario.totalCapital;
+            document.getElementById('entry-steps').value = scenario.stepsCount;
+            document.getElementById('entry-steps-slider').value = scenario.stepsCount;
+            document.getElementById('min-entry-price').value = scenario.minEntryPrice;
+            document.getElementById('capital-dist-type').value = scenario.capDistType;
+            document.getElementById('price-dist-type').value = scenario.priceDistType;
+
+            calculateLadder();
+        }
+
+        function deleteSimulation(id, event) {
+            event.stopPropagation(); // Avoid triggering card loading
+            let list = getSavedSimulations();
+            list = list.filter(item => item.id !== id);
+            localStorage.setItem(storageKey, JSON.stringify(list));
+            renderSavedList();
+        }
+
+        function clearAllSimulations() {
+            localStorage.removeItem(storageKey);
+            renderSavedList();
+        }
+
+        function renderSavedList() {
+            const container = document.getElementById('saved-scenarios-list');
+            const list = getSavedSimulations();
+
+            if (list.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 italic text-center py-4">No hay simulaciones guardadas.</p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            list.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-950 hover:bg-slate-850 p-3 rounded-xl border border-slate-800 hover:border-slate-700 cursor-pointer transition-all flex items-center justify-between";
+                div.onclick = () => loadSimulation(item.id);
+
+                div.innerHTML = `
+                    <div class="flex flex-col gap-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-slate-200 text-xs tracking-wider">${item.ticker}</span>
+                            <span class="text-[10px] text-slate-400 font-medium">${item.name}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 flex gap-2">
+                            <span>Cap: ${item.currency === 'USD' ? 'U$S' : 'AR$'} ${item.totalCapital.toLocaleString('es-AR')}</span>
+                            <span>•</span>
+                            <span>${item.stepsCount} niveles</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-500">${item.timestamp}</span>
+                        <button onclick="deleteSimulation(${item.id}, event)" class="p-1 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded transition-all">
+                            <i class="fa-solid fa-trash-can text-[11px]"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Export simulation details as a CSV download
+        function exportCSV() {
+            if (ladderData.length === 0) return;
+
+            const ticker = document.getElementById('asset-ticker').value.toUpperCase() || 'ACTIVO';
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Nivel,Precio Entrada,Capital Asignado,Cantidad Adquirida,Promedio Parcial,Riesgo a SL (%)\r\n";
+
+            ladderData.forEach(row => {
+                const line = [
+                    row.step,
+                    row.price.toFixed(3),
+                    row.capital.toFixed(2),
+                    row.units.toFixed(6),
+                    row.partialAvg.toFixed(3),
+                    row.distanceToSL.toFixed(2)
+                ].join(",");
+                csvContent += line + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Escalera_DCA_${ticker}.csv`);
+            document.body.appendChild(link); // Required for FF
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Initialize calculations on window loaded
+        window.onload = function() {
+            calculateLadder();
+            renderSavedList();
+        }
+    </script>
+</body>
+</html>
