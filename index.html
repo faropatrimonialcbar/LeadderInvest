@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js para Visualización -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2pdf.js para Exportación Profesional de Documentos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body {
@@ -346,7 +348,7 @@
                     </div>
                 </div>
 
-                <!-- Execution Ladder Table -->
+                <!-- Execution Ladder Table with PDF & CSV exports -->
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
                     <div class="px-5 py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
@@ -355,9 +357,14 @@
                             </h3>
                             <p class="text-[11px] text-slate-400">Coloca órdenes de compra limitadas según este esquema.</p>
                         </div>
-                        <button onclick="exportCSV()" class="text-xs px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5 self-start sm:self-auto">
-                            <i class="fa-solid fa-file-export text-slate-400"></i> Exportar CSV
-                        </button>
+                        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                            <button onclick="exportCSV()" class="text-xs px-3 py-1.5 bg-slate-850 hover:bg-slate-800 border border-slate-700 rounded-lg font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-export text-slate-400"></i> Exportar CSV
+                            </button>
+                            <button onclick="exportPlanificadorPDF()" class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold text-white transition-all flex items-center gap-1.5 shadow">
+                                <i class="fa-solid fa-file-pdf"></i> Exportar PDF
+                            </button>
+                        </div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -386,6 +393,15 @@
         <!-- Tab 2: Portfolio View -->
         <div id="view-portfolio" class="hidden flex flex-col gap-6">
             
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-blue-500"></i> Resumen de Cartera General
+                </h3>
+                <button onclick="exportPortfolioGeneralPDF()" class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold text-white transition-all flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-file-pdf"></i> Exportar Reporte General (PDF)
+                </button>
+            </div>
+
             <!-- Portfolio Top Metrics Dashboard -->
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <!-- Port Card 1: Total Committed Budget -->
@@ -432,6 +448,29 @@
 
     </main>
 
+    <!-- Portfolio Chart Modal Window -->
+    <div id="portfolio-chart-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-850 rounded-2xl max-w-4xl w-full p-5 sm:p-6 shadow-2xl relative flex flex-col gap-4">
+            <button onclick="closePortfolioChartModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-1 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div>
+                <h3 id="portfolio-chart-title" class="text-md sm:text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <!-- Dynamic Title -->
+                </h3>
+                <p class="text-xs text-slate-400">Visualización de la estrategia real ejecutada en cartera con tus modificaciones actuales.</p>
+            </div>
+            <div class="relative w-full h-80 sm:h-96 bg-slate-950/50 rounded-xl p-2 border border-slate-800">
+                <canvas id="portfolioChartModalCanvas"></canvas>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="closePortfolioChartModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold rounded-xl text-xs transition-all">
+                    Cerrar Gráfico
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer Section -->
     <footer class="border-t border-slate-900 bg-slate-950 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
@@ -451,6 +490,9 @@
         let ladderData = []; // Array of calculated steps
         const storageKey = 'ladder_invest_saved_plans';
         const portfolioStorageKey = 'ladder_invest_portfolio';
+
+        let editingItemId = null; // Tracks the ID of the portfolio item being edited
+        let portfolioChartInstance = null; // Canvas instance for portfolio specific charts
 
         // Format Helper
         function formatMoney(amount, currency = globalCurrency) {
@@ -1047,6 +1089,74 @@
             }
         }
 
+        // Generates the explicit price levels and capital sizes based on the scenario formula
+        function buildScenarioArrays(item) {
+            const stepsCount = item.stepsCount;
+            const prices = [];
+            const capitalAllocations = [];
+            const marketPrice = item.marketPrice;
+            const minEntryPrice = item.minEntryPrice;
+            const totalCapital = item.totalCapital;
+
+            if (item.priceDistType === 'fixed') {
+                for (let i = 0; i < stepsCount; i++) prices.push(marketPrice);
+            } else if (item.priceDistType === 'linear') {
+                const diff = (marketPrice - minEntryPrice) / (stepsCount - 1);
+                for (let i = 0; i < stepsCount; i++) prices.push(marketPrice - i * diff);
+            } else if (item.priceDistType === 'logarithmic') {
+                for (let i = 0; i < stepsCount; i++) {
+                    const pct = Math.log(1 + (i / (stepsCount - 1)) * (Math.E - 1));
+                    prices.push(marketPrice - pct * (marketPrice - minEntryPrice));
+                }
+            } else if (item.priceDistType === 'exponential') {
+                for (let i = 0; i < stepsCount; i++) {
+                    const pct = (Math.pow(2, i / (stepsCount - 1)) - 1);
+                    prices.push(marketPrice - pct * (marketPrice - minEntryPrice));
+                }
+            }
+
+            let weights = [];
+            if (item.capDistType === 'equal') {
+                weights = Array(stepsCount).fill(1);
+            } else if (item.capDistType === 'martingale') {
+                const baseMultiplier = 1.5;
+                for (let i = 0; i < stepsCount; i++) weights.push(Math.pow(baseMultiplier, i));
+            } else if (item.capDistType === 'inverse_martingale') {
+                const baseMultiplier = 1.5;
+                for (let i = 0; i < stepsCount; i++) weights.push(Math.pow(baseMultiplier, stepsCount - 1 - i));
+            } else if (item.capDistType === 'exponential') {
+                for (let i = 0; i < stepsCount; i++) {
+                    weights.push(Math.pow(2, i));
+                }
+            }
+
+            const totalWeights = weights.reduce((acc, curr) => acc + curr, 0);
+            for (let i = 0; i < stepsCount; i++) {
+                capitalAllocations.push((weights[i] / totalWeights) * totalCapital);
+            }
+
+            const stepDetails = [];
+            for (let i = 0; i < stepsCount; i++) {
+                stepDetails.push({
+                    step: i + 1,
+                    price: prices[i],
+                    capital: capitalAllocations[i],
+                    units: capitalAllocations[i] / prices[i]
+                });
+            }
+
+            const tpDetails = [];
+            for (let i = 1; i <= item.tpCount; i++) {
+                tpDetails.push({
+                    tp: i,
+                    price: item[`tpPrice${i}`],
+                    pct: item[`tpPct${i}`]
+                });
+            }
+
+            return { stepDetails, tpDetails };
+        }
+
         // Move a simulation into the real Portfolio
         function executeToPortfolio(id) {
             const list = getSavedSimulations();
@@ -1055,7 +1165,9 @@
 
             const portfolio = getPortfolio();
             
-            // Check if already executed to avoid absolute duplicates
+            // Build fixed step details arrays to support custom manual changes
+            const { stepDetails, tpDetails } = buildScenarioArrays(scenario);
+            
             const newItem = {
                 id: Date.now(),
                 ticker: scenario.ticker,
@@ -1077,7 +1189,9 @@
                 currency: scenario.currency,
                 executedSteps: [1], // Default execute the first level to make it reactive instantly
                 executedTps: [],
-                slExecuted: false
+                slExecuted: false,
+                stepDetails, // Persisted array for future edits
+                tpDetails    // Persisted array for future edits
             };
 
             portfolio.unshift(newItem);
@@ -1086,92 +1200,44 @@
         }
 
         function calculatePortfolioItemDetails(item) {
+            // Self-healing migration for legacy plans that don't have step details stored
+            if (!item.stepDetails || !item.tpDetails) {
+                const built = buildScenarioArrays(item);
+                item.stepDetails = built.stepDetails;
+                item.tpDetails = built.tpDetails;
+            }
+
             let cash = item.totalCapital;
             let units = 0;
             let costBasis = 0;
             let realizedPnL = 0;
             let activeBuysCount = 0;
 
-            const stepsCount = item.stepsCount;
-            const prices = [];
-            const capitalAllocations = [];
+            // Recalculate planned total units based on customized arrays
+            let totalPlannedUnits = item.stepDetails.reduce((acc, step) => acc + (step.capital / step.price), 0);
 
-            if (item.priceDistType === 'fixed') {
-                for (let i = 0; i < stepsCount; i++) prices.push(item.marketPrice);
-            } else if (item.priceDistType === 'linear') {
-                const diff = (item.marketPrice - item.minEntryPrice) / (stepsCount - 1);
-                for (let i = 0; i < stepsCount; i++) prices.push(item.marketPrice - i * diff);
-            } else if (item.priceDistType === 'logarithmic') {
-                for (let i = 0; i < stepsCount; i++) {
-                    const pct = Math.log(1 + (i / (stepsCount - 1)) * (Math.E - 1));
-                    prices.push(item.marketPrice - pct * (item.marketPrice - item.minEntryPrice));
-                }
-            } else if (item.priceDistType === 'exponential') {
-                for (let i = 0; i < stepsCount; i++) {
-                    const pct = (Math.pow(2, i / (stepsCount - 1)) - 1);
-                    prices.push(item.marketPrice - pct * (item.marketPrice - item.minEntryPrice));
-                }
-            }
-
-            let weights = [];
-            if (item.capDistType === 'equal') {
-                weights = Array(stepsCount).fill(1);
-            } else if (item.capDistType === 'martingale') {
-                const baseMultiplier = 1.5;
-                for (let i = 0; i < stepsCount; i++) weights.push(Math.pow(baseMultiplier, i));
-            } else if (item.capDistType === 'inverse_martingale') {
-                const baseMultiplier = 1.5;
-                for (let i = 0; i < stepsCount; i++) weights.push(Math.pow(baseMultiplier, stepsCount - 1 - i));
-            } else if (item.capDistType === 'exponential') {
-                for (let i = 0; i < stepsCount; i++) weights.push(Math.pow(2, i));
-            }
-
-            const totalWeights = weights.reduce((acc, curr) => acc + curr, 0);
-            for (let i = 0; i < stepsCount; i++) {
-                capitalAllocations.push((weights[i] / totalWeights) * item.totalCapital);
-            }
-
-            const stepDetails = [];
-            let totalPlannedUnits = 0;
-            for (let i = 0; i < stepsCount; i++) {
-                const p = prices[i];
-                const cap = capitalAllocations[i];
-                const u = cap / p;
-                totalPlannedUnits += u;
-                stepDetails.push({
-                    step: i + 1,
-                    price: p,
-                    capital: cap,
-                    units: u,
-                    executed: !!(item.executedSteps && item.executedSteps.includes(i + 1))
-                });
-            }
-
-            const tpDetails = [];
-            for (let i = 1; i <= item.tpCount; i++) {
-                tpDetails.push({
-                    tp: i,
-                    price: item[`tpPrice${i}`],
-                    pct: item[`tpPct${i}`],
-                    executed: !!(item.executedTps && item.executedTps.includes(i))
-                });
-            }
-
-            // Apply sequence: Executed Buys
-            stepDetails.forEach(step => {
-                if (step.executed) {
+            // Match dynamic check boxes
+            const stepDetailsProcessed = item.stepDetails.map(step => {
+                const isExecuted = !!(item.executedSteps && item.executedSteps.includes(step.step));
+                if (isExecuted) {
                     cash -= step.capital;
-                    units += step.units;
+                    units += step.capital / step.price;
                     costBasis += step.capital;
                     activeBuysCount++;
                 }
+                return {
+                    ...step,
+                    units: step.capital / step.price,
+                    executed: isExecuted
+                };
             });
 
             let avgPrice = units > 0 ? costBasis / units : 0;
 
-            // Apply sequence: Executed TPs in order
-            tpDetails.forEach(tp => {
-                if (tp.executed) {
+            // Process sales
+            const tpDetailsProcessed = item.tpDetails.map(tp => {
+                const isExecuted = !!(item.executedTps && item.executedTps.includes(tp.tp));
+                if (isExecuted) {
                     let sellUnits = totalPlannedUnits * (tp.pct / 100);
                     sellUnits = Math.min(sellUnits, units); // Safeguard
                     
@@ -1185,9 +1251,13 @@
                     
                     avgPrice = units > 0 ? costBasis / units : 0;
                 }
+                return {
+                    ...tp,
+                    executed: isExecuted
+                };
             });
 
-            // Apply sequence: Stop Loss
+            // Process SL
             if (item.slExecuted) {
                 if (units > 0) {
                     const revenue = units * item.stopLoss;
@@ -1203,8 +1273,8 @@
 
             return {
                 ...item,
-                stepDetails,
-                tpDetails,
+                stepDetails: stepDetailsProcessed,
+                tpDetails: tpDetailsProcessed,
                 cash,
                 units,
                 costBasis,
@@ -1274,6 +1344,233 @@
             renderPortfolio();
         }
 
+        function startEditingItem(itemId) {
+            editingItemId = itemId;
+            renderPortfolio();
+        }
+
+        function cancelEditing() {
+            editingItemId = null;
+            renderPortfolio();
+        }
+
+        function saveEditedItem(itemId) {
+            const portfolio = getPortfolio();
+            const idx = portfolio.findIndex(x => x.id === itemId);
+            if (idx === -1) return;
+
+            const item = portfolio[idx];
+            
+            // Assure structural migration
+            if (!item.stepDetails || !item.tpDetails) {
+                const built = buildScenarioArrays(item);
+                item.stepDetails = built.stepDetails;
+                item.tpDetails = built.tpDetails;
+            }
+
+            // 1. Recover customized dca purchases values
+            let newTotalCapital = 0;
+            const updatedSteps = item.stepDetails.map(step => {
+                const priceInput = document.getElementById(`edit-step-price-${step.step}`);
+                const capInput = document.getElementById(`edit-step-capital-${step.step}`);
+                
+                const newPrice = Math.max(0.001, parseFloat(priceInput.value) || step.price);
+                const newCap = Math.max(0, parseFloat(capInput.value) || step.capital);
+                
+                newTotalCapital += newCap;
+                return {
+                    ...step,
+                    price: newPrice,
+                    capital: newCap,
+                    units: newCap / newPrice
+                };
+            });
+
+            // 2. Recover customized sales targets
+            const updatedTps = item.tpDetails.map(tp => {
+                const priceInput = document.getElementById(`edit-tp-price-${tp.tp}`);
+                const pctInput = document.getElementById(`edit-tp-pct-${tp.tp}`);
+
+                const newPrice = Math.max(0.001, parseFloat(priceInput.value) || tp.price);
+                const newPct = Math.min(100, Math.max(0, parseInt(pctInput.value) || tp.pct));
+
+                return {
+                    ...tp,
+                    price: newPrice,
+                    pct: newPct
+                };
+            });
+
+            // 3. Recover stop loss
+            const slInput = document.getElementById('edit-sl-price');
+            const newSL = Math.max(0, parseFloat(slInput.value) || item.stopLoss);
+
+            // Reassign updated components
+            item.stepDetails = updatedSteps;
+            item.tpDetails = updatedTps;
+            item.stopLoss = newSL;
+            item.totalCapital = newTotalCapital; // Synchronize overall capital budget
+
+            portfolio[idx] = item;
+            savePortfolio(portfolio);
+
+            editingItemId = null;
+            renderPortfolio();
+        }
+
+        function openPortfolioChart(itemId) {
+            const portfolio = getPortfolio();
+            const rawItem = portfolio.find(x => x.id === itemId);
+            if (!rawItem) return;
+
+            const item = calculatePortfolioItemDetails(rawItem);
+
+            // Open Modal container
+            const modal = document.getElementById('portfolio-chart-modal');
+            modal.classList.remove('hidden');
+            document.getElementById('portfolio-chart-title').innerText = `Gráfico Real Cartera: ${item.ticker} (${item.name})`;
+
+            const canvas = document.getElementById('portfolioChartModalCanvas');
+            const ctx = canvas.getContext('2d');
+
+            if (portfolioChartInstance) {
+                portfolioChartInstance.destroy();
+            }
+
+            const labels = item.stepDetails.map(step => `Piso ${step.step}`);
+            const prices = item.stepDetails.map(step => step.price);
+            const sizes = item.stepDetails.map(step => step.capital);
+
+            const maxCap = Math.max(...sizes);
+            const minCap = Math.min(...sizes);
+            const bubbleSizes = sizes.map(cap => {
+                if (maxCap === minCap) return 12;
+                return 8 + ((cap - minCap) / (maxCap - minCap)) * 14;
+            });
+
+            // Distinguish executed entries from upcoming ones visually
+            const pointBackgroundColors = item.stepDetails.map(step => 
+                step.executed ? '#10b981' : 'rgba(71, 85, 105, 0.4)'
+            );
+            const pointBorderColors = item.stepDetails.map(step => 
+                step.executed ? '#34d399' : '#64748b'
+            );
+
+            const allPrices = [...prices, item.marketPrice, item.stopLoss, item.avgPrice].filter(p => p > 0);
+            item.tpDetails.forEach(tp => { if (tp.price > 0) allPrices.push(tp.price); });
+            const maxVal = Math.max(...allPrices) * 1.05;
+            const minVal = Math.min(...allPrices) * 0.95;
+
+            portfolioChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Operativa Real',
+                        data: prices,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        pointBackgroundColor: pointBackgroundColors,
+                        pointBorderColor: pointBorderColors,
+                        pointRadius: bubbleSizes,
+                        pointHoverRadius: bubbleSizes.map(s => s + 3),
+                        showLine: true,
+                        borderDash: [4, 4],
+                        borderWidth: 1.5,
+                        tension: 0.1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const idx = context.dataIndex;
+                                    const step = item.stepDetails[idx];
+                                    const status = step.executed ? 'EJECUTADO' : 'PENDIENTE';
+                                    return ` Piso ${step.step} [${status}]: ${formatMoney(step.price, item.currency)} | Capital: ${formatMoney(step.capital, item.currency)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: minVal,
+                            max: maxVal,
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 10 },
+                                callback: value => value.toLocaleString('es-AR', { maximumFractionDigits: 3 })
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'portfolioHorizontalLines',
+                    afterDraw: function(chart) {
+                        const {ctx, chartArea: {left, right}, scales: {y}} = chart;
+                        ctx.save();
+
+                        // Actual purchase cost average line
+                        if (item.units > 0 && item.avgPrice > 0) {
+                            const avgY = y.getPixelForValue(item.avgPrice);
+                            ctx.strokeStyle = '#10b981';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([6, 4]);
+                            ctx.beginPath(); ctx.moveTo(left, avgY); ctx.lineTo(right, avgY); ctx.stroke();
+                            ctx.fillStyle = '#10b981';
+                            ctx.font = 'bold 9px Inter';
+                            ctx.fillText(`PROM. REAL COMPRA: ${item.avgPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, avgY - 5);
+                        }
+
+                        // Absolute Stop Loss Floor
+                        if (item.stopLoss > 0) {
+                            const slY = y.getPixelForValue(item.stopLoss);
+                            ctx.strokeStyle = '#ef4444';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([4, 4]);
+                            ctx.beginPath(); ctx.moveTo(left, slY); ctx.lineTo(right, slY); ctx.stroke();
+                            ctx.fillStyle = '#ef4444';
+                            ctx.font = 'bold 9px Inter';
+                            ctx.fillText(`STOP LOSS: ${item.stopLoss.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, slY - 5);
+                        }
+
+                        // Sales objectives Target
+                        item.tpDetails.forEach((tp) => {
+                            if (tp.price > 0) {
+                                const tpY = y.getPixelForValue(tp.price);
+                                ctx.strokeStyle = tp.executed ? '#10b981' : 'rgba(139, 92, 246, 0.5)';
+                                ctx.lineWidth = tp.executed ? 2 : 1;
+                                ctx.setLineDash(tp.executed ? [] : [3, 3]);
+                                ctx.beginPath(); ctx.moveTo(left, tpY); ctx.lineTo(right, tpY); ctx.stroke();
+                                ctx.fillStyle = tp.executed ? '#10b981' : 'rgba(167, 139, 250, 0.9)';
+                                ctx.font = tp.executed ? 'bold 9px Inter' : '9px Inter';
+                                ctx.fillText(`TP ${tp.tp} (${tp.pct}%)${tp.executed ? ' [VENDIDO]' : ''}: ${tp.price.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, right - 130, tpY - 5);
+                            }
+                        });
+
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+
+        function closePortfolioChartModal() {
+            document.getElementById('portfolio-chart-modal').classList.add('hidden');
+            if (portfolioChartInstance) {
+                portfolioChartInstance.destroy();
+                portfolioChartInstance = null;
+            }
+        }
+
         function renderPortfolio() {
             const container = document.getElementById('portfolio-items-list');
             if (!container) return;
@@ -1338,62 +1635,148 @@
 
                 // Create Card Element
                 const card = document.createElement('div');
-                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5";
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5 relative overflow-hidden";
 
                 // Progress percentage for visual aid
                 const progressPct = (item.activeBuysCount / item.stepsCount) * 100;
 
-                // Render DCA Steps checkbox elements
+                // Render DCA Steps checkbox elements or editable fields
                 let buysHtml = '';
-                item.stepDetails.forEach(step => {
-                    const isChecked = step.executed;
-                    const colorClass = isChecked 
-                        ? 'bg-blue-600 hover:bg-blue-500 border-blue-500 text-white' 
-                        : 'bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-500';
-                    const labelStyle = isChecked ? 'text-slate-200 line-through' : 'text-slate-400';
-                    
-                    buysHtml += `
-                        <button onclick="toggleStepInPortfolio(${item.id}, ${step.step})" class="w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-all ${colorClass}">
-                            <div class="flex flex-col">
-                                <span class="text-[10px] font-bold uppercase ${isChecked ? 'text-blue-200' : 'text-slate-500'}">Piso ${step.step}</span>
-                                <span class="text-xs font-mono font-bold">${formatMoney(step.price, item.currency)}</span>
+                if (editingItemId === item.id) {
+                    item.stepDetails.forEach(step => {
+                        buysHtml += `
+                            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] font-bold text-blue-400 uppercase">Piso ${step.step}</span>
+                                    <span class="text-[9px] text-slate-500 font-mono">${step.executed ? 'EJECUTADO' : 'PENDIENTE'}</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-[9px] text-slate-500 block mb-0.5">Precio de Entrada</label>
+                                        <input type="number" step="0.001" id="edit-step-price-${step.step}" value="${step.price}" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-slate-500 block mb-0.5">Monto (${item.currency})</label>
+                                        <input type="number" step="0.001" id="edit-step-capital-${step.step}" value="${step.capital}" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-[10px] font-mono">${formatMoney(step.capital, item.currency)}</span>
-                                <i class="fa-solid ${isChecked ? 'fa-square-check' : 'fa-square'} text-sm"></i>
-                            </div>
-                        </button>
-                    `;
-                });
+                        `;
+                    });
+                } else {
+                    item.stepDetails.forEach(step => {
+                        const isChecked = step.executed;
+                        const colorClass = isChecked 
+                            ? 'bg-blue-600 hover:bg-blue-500 border-blue-500 text-white shadow' 
+                            : 'bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-500';
+                        
+                        buysHtml += `
+                            <button onclick="toggleStepInPortfolio(${item.id}, ${step.step})" class="w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-all ${colorClass}">
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-bold uppercase ${isChecked ? 'text-blue-200' : 'text-slate-500'}">Piso ${step.step}</span>
+                                    <span class="text-xs font-mono font-bold">${formatMoney(step.price, item.currency)}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[10px] font-mono">${formatMoney(step.capital, item.currency)}</span>
+                                    <i class="fa-solid ${isChecked ? 'fa-square-check' : 'fa-square'} text-sm"></i>
+                                </div>
+                            </button>
+                        `;
+                    });
+                }
 
-                // Render Take Profits elements
+                // Render Take Profits elements or editable fields
                 let tpsHtml = '';
-                item.tpDetails.forEach(tp => {
-                    const isChecked = tp.executed;
-                    const canExecute = item.units > 0 || isChecked;
-                    const statusClass = isChecked
-                        ? 'bg-purple-600 hover:bg-purple-500 border-purple-500 text-white'
-                        : canExecute 
-                            ? 'bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-400' 
-                            : 'bg-slate-950 opacity-40 cursor-not-allowed border-slate-900 text-slate-600';
-                    
-                    tpsHtml += `
-                        <button ${canExecute ? '' : 'disabled'} onclick="toggleTpInPortfolio(${item.id}, ${tp.tp})" class="w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-all ${statusClass}">
-                            <div class="flex flex-col">
-                                <span class="text-[10px] font-bold uppercase ${isChecked ? 'text-purple-200' : 'text-slate-500'}">Objetivo TP ${tp.tp} (${tp.pct}%)</span>
-                                <span class="text-xs font-mono font-bold">${formatMoney(tp.price, item.currency)}</span>
+                if (editingItemId === item.id) {
+                    item.tpDetails.forEach(tp => {
+                        tpsHtml += `
+                            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] font-bold text-purple-400 uppercase">Objetivo TP ${tp.tp}</span>
+                                    <span class="text-[9px] text-slate-500 font-mono">${tp.executed ? 'EJECUTADO' : 'PENDIENTE'}</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-[9px] text-slate-500 block mb-0.5">Precio Salida</label>
+                                        <input type="number" step="0.001" id="edit-tp-price-${tp.tp}" value="${tp.price}" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-slate-500 block mb-0.5">Porcentaje Venta (%)</label>
+                                        <input type="number" step="1" id="edit-tp-pct-${tp.tp}" value="${tp.pct}" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500">
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-1.5">
-                                <i class="fa-solid ${isChecked ? 'fa-square-check' : 'fa-square'} text-sm"></i>
-                            </div>
-                        </button>
-                    `;
-                });
+                        `;
+                    });
+                } else {
+                    item.tpDetails.forEach(tp => {
+                        const isChecked = tp.executed;
+                        const canExecute = item.units > 0 || isChecked;
+                        const statusClass = isChecked
+                            ? 'bg-purple-600 hover:bg-purple-500 border-purple-500 text-white'
+                            : canExecute 
+                                ? 'bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-400' 
+                                : 'bg-slate-950 opacity-40 cursor-not-allowed border-slate-900 text-slate-600';
+                        
+                        tpsHtml += `
+                            <button ${canExecute ? '' : 'disabled'} onclick="toggleTpInPortfolio(${item.id}, ${tp.tp})" class="w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-all ${statusClass}">
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-bold uppercase ${isChecked ? 'text-purple-200' : 'text-slate-500'}">Objetivo TP ${tp.tp} (${tp.pct}%)</span>
+                                    <span class="text-xs font-mono font-bold">${formatMoney(tp.price, item.currency)}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <i class="fa-solid ${isChecked ? 'fa-square-check' : 'fa-square'} text-sm"></i>
+                                </div>
+                            </button>
+                        `;
+                    });
+                }
 
                 // Stop Loss Section
-                const slClass = item.slExecuted
-                    ? 'bg-red-600 text-white border-red-500 hover:bg-red-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-850';
+                let slHtml = '';
+                if (editingItemId === item.id) {
+                    slHtml = `
+                        <div class="p-3 bg-slate-950 rounded-xl border border-slate-850 flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-red-400 uppercase">Precio de Stop Loss (SL)</label>
+                            <input type="number" step="0.001" id="edit-sl-price" value="${item.stopLoss}" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-red-400 font-mono font-semibold focus:outline-none focus:border-red-500">
+                        </div>
+                    `;
+                } else {
+                    const slClass = item.slExecuted
+                        ? 'bg-red-600 text-white border-red-500 hover:bg-red-500 shadow'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-850';
+                    
+                    slHtml = `
+                        <button onclick="toggleSlInPortfolio(${item.id})" class="w-full p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${slClass}">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
+                                <span>Detener Pérdida (Stop Loss)</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-mono">${formatMoney(item.stopLoss, item.currency)}</span>
+                                <i class="fa-solid ${item.slExecuted ? 'fa-check-double' : 'fa-circle-xmark'}"></i>
+                            </div>
+                        </button>
+                    `;
+                }
+
+                let editActionsHtml = '';
+                if (editingItemId === item.id) {
+                    editActionsHtml = `
+                        <button onclick="saveEditedItem(${item.id})" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 shadow">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar
+                        </button>
+                        <button onclick="cancelEditing()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold rounded-lg transition-all flex items-center gap-1">
+                            <i class="fa-solid fa-ban"></i> Cancelar
+                        </button>
+                    `;
+                } else {
+                    editActionsHtml = `
+                        <button onclick="startEditingItem(${item.id})" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1">
+                            <i class="fa-solid fa-pen-to-square"></i> Editar
+                        </button>
+                    `;
+                }
 
                 // Realized PnL formatting for the specific item
                 const pnlClass = item.realizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400';
@@ -1414,17 +1797,30 @@
                                 <p class="text-[11px] text-slate-500">Plan de ${item.stepsCount} niveles • Presupuesto: ${formatMoney(item.totalCapital, item.currency)}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <div class="text-right">
+                        <div class="flex items-center gap-4 flex-wrap sm:flex-nowrap justify-between sm:justify-end w-full sm:w-auto">
+                            <!-- Executed Progress next to Grafico Action Button -->
+                            <div class="text-left flex flex-col">
                                 <span class="block text-[10px] text-slate-500 uppercase font-semibold">Progreso Ejecutado</span>
-                                <div class="w-24 bg-slate-950 h-2 rounded-full overflow-hidden mt-1 inline-block border border-slate-850">
-                                    <div class="bg-blue-500 h-full transition-all" style="width: ${progressPct}%"></div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="w-24 bg-slate-950 h-2 rounded-full overflow-hidden inline-block border border-slate-850">
+                                        <div class="bg-blue-500 h-full transition-all" style="width: ${progressPct}%"></div>
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-300 font-mono">${item.activeBuysCount}/${item.stepsCount}</span>
                                 </div>
-                                <span class="text-xs font-bold text-slate-300 ml-1.5 font-mono">${item.activeBuysCount}/${item.stepsCount}</span>
                             </div>
-                            <button onclick="deleteFromPortfolio(${item.id})" class="p-2 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded-xl transition-all border border-transparent hover:border-red-500/10" title="Eliminar de Cartera">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            
+                            <div class="flex items-center gap-1.5 self-center">
+                                <button onclick="openPortfolioChart(${item.id})" class="px-2.5 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/20 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1" title="Graficar estado de cartera real">
+                                    <i class="fa-solid fa-chart-line text-[9px]"></i> Gráfico
+                                </button>
+                                <button onclick="exportPortfolioPositionPDF(${item.id})" class="px-2.5 py-1.5 bg-purple-600/20 text-purple-400 hover:bg-purple-600 hover:text-white border border-purple-500/20 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1" title="Exportar esta posición a PDF">
+                                    <i class="fa-solid fa-file-pdf text-[9px]"></i> PDF
+                                </button>
+                                ${editActionsHtml}
+                                <button onclick="deleteFromPortfolio(${item.id})" class="p-2 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded-xl transition-all border border-transparent hover:border-red-500/10" title="Eliminar de Cartera">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -1436,7 +1832,7 @@
                             <div class="flex flex-col gap-3">
                                 <h5 class="text-xs font-bold text-slate-400 border-b border-slate-900 pb-1.5 uppercase tracking-wider">Métricas Activas</h5>
                                 <div class="flex justify-between items-center text-xs">
-                                    <span class="text-slate-500">Precio de Compra Promedio:</span>
+                                    <span class="text-slate-500">Precio Compra Promedio:</span>
                                     <span class="font-bold text-slate-200 font-mono">${formatMoney(item.avgPrice, item.currency)}</span>
                                 </div>
                                 <div class="flex justify-between items-center text-xs">
@@ -1465,7 +1861,7 @@
                             <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                 <i class="fa-solid fa-cart-shopping text-blue-500"></i> Ejecución de Compras
                             </h5>
-                            <div class="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <div class="grid grid-cols-1 gap-2.5 max-h-64 overflow-y-auto pr-1">
                                 ${buysHtml}
                             </div>
                         </div>
@@ -1476,23 +1872,14 @@
                                 <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                     <i class="fa-solid fa-sack-dollar text-purple-500"></i> Ejecución de Ventas (TP)
                                 </h5>
-                                <div class="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1">
+                                <div class="grid grid-cols-1 gap-2.5 max-h-48 overflow-y-auto pr-1">
                                     ${tpsHtml}
                                 </div>
                             </div>
                             
-                            <!-- Stop Loss Panic Button -->
+                            <!-- Stop Loss Panel -->
                             <div class="pt-3">
-                                <button onclick="toggleSlInPortfolio(${item.id})" class="w-full p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${slClass}">
-                                    <div class="flex items-center gap-2">
-                                        <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
-                                        <span>Detener Pérdida (Stop Loss)</span>
-                                    </div>
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="text-[10px] font-mono">${formatMoney(item.stopLoss, item.currency)}</span>
-                                        <i class="fa-solid ${item.slExecuted ? 'fa-check-double' : 'fa-circle-xmark'}"></i>
-                                    </div>
-                                </button>
+                                ${slHtml}
                             </div>
                         </div>
 
@@ -1544,6 +1931,556 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // Dynamic PDF Exporter for Simulation Planning
+        function exportPlanificadorPDF() {
+            if (ladderData.length === 0) return;
+
+            const ticker = document.getElementById('asset-ticker').value.toUpperCase() || 'ACTIVO';
+            const name = document.getElementById('asset-name').value || 'Activo Simulado';
+            const marketPrice = parseFloat(document.getElementById('market-price').value) || 0;
+            const stopLoss = parseFloat(document.getElementById('stop-loss').value) || 0;
+            const totalCapital = parseFloat(document.getElementById('total-capital').value) || 0;
+
+            const avgPrice = document.getElementById('summary-avg-price').innerText;
+            const totalUnits = document.getElementById('summary-total-units').innerText;
+            const slRisk = document.getElementById('summary-sl-risk').innerText;
+            const slRiskPct = document.getElementById('summary-sl-risk-pct').innerText;
+            const tpAvgPrice = document.getElementById('summary-tp-avg-price').innerText;
+            const tpProfit = document.getElementById('summary-tp-profit').innerText;
+            const tpProfitPct = document.getElementById('summary-tp-profit-pct').innerText;
+            const rrRatio = document.getElementById('summary-rr-ratio').innerText;
+
+            // Extract the chart image to display in our clean print template
+            const chartImg = chartInstance ? chartInstance.toBase64Image() : '';
+
+            // Generate clean printing element
+            const element = document.createElement('div');
+            element.className = "bg-white text-slate-900 p-6 flex flex-col gap-5 text-sm";
+            element.style.width = '190mm'; // Exactly matches printable area inside 10mm margin boundaries
+            element.style.boxSizing = 'border-box';
+            element.style.position = 'absolute';
+            element.style.left = '-9999px'; // Render off-screen safely
+            element.style.top = '0';
+
+            element.innerHTML = `
+                <!-- PDF Header -->
+                <div class="border-b-2 border-blue-600 pb-4 flex justify-between items-center" style="box-sizing: border-box; width: 100%;">
+                    <div>
+                        <h1 class="text-xl font-extrabold text-blue-800 tracking-wide" style="margin: 0; padding: 0;">LadderInvest Pro</h1>
+                        <p class="text-xs text-slate-500" style="margin: 3px 0 0 0;">Planificador Matemático de Estrategias Escalonadas (DCA)</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold uppercase tracking-wider">${ticker}</span>
+                        <p class="text-[10px] text-slate-400 mt-1" style="margin: 4px 0 0 0;">Fecha: ${new Date().toLocaleDateString('es-AR')}</p>
+                    </div>
+                </div>
+
+                <!-- Simulation Info Header -->
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; width: 100%;">
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-400 uppercase" style="margin: 0 0 4px 0;">Activo Configurado</h3>
+                        <p class="text-md font-extrabold text-slate-800" style="margin: 0;">${name} (${ticker})</p>
+                    </div>
+                    <div style="display: flex; gap: 15px; text-align: right;">
+                        <div>
+                            <h4 class="text-[10px] text-slate-400 uppercase" style="margin: 0 0 2px 0;">Precio Mercado</h4>
+                            <p class="text-xs font-bold text-slate-700" style="margin: 0;">${formatMoney(marketPrice)}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-[10px] text-slate-400 uppercase" style="margin: 0 0 2px 0;">Stop Loss</h4>
+                            <p class="text-xs font-bold text-red-600" style="margin: 0;">${formatMoney(stopLoss)}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics Dashboard Grid -->
+                <div style="box-sizing: border-box; width: 100%;">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0;">Métricas de la Simulación</h3>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; box-sizing: border-box; width: 100%;">
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Precio Promedio</span>
+                            <span class="text-xs font-bold text-slate-800" style="font-size: 11px;">${avgPrice}</span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Unidades Adquiridas</span>
+                            <span class="text-xs font-bold text-slate-800" style="font-size: 11px;">${totalUnits}</span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Capital Total</span>
+                            <span class="text-xs font-bold text-slate-800" style="font-size: 11px;">${formatMoney(totalCapital)}</span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Riesgo Stop Loss</span>
+                            <span class="text-xs font-bold text-red-600" style="font-size: 11px;">${slRisk} <span class="text-[9px] block">${slRiskPct}</span></span>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; box-sizing: border-box; width: 100%;">
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Precio Venta Promedio</span>
+                            <span class="text-xs font-bold text-slate-800" style="font-size: 11px;">${tpAvgPrice}</span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Ganancia Estimada</span>
+                            <span class="text-xs font-bold text-emerald-600" style="font-size: 11px;">${tpProfit} <span class="text-[9px] block">${tpProfitPct}</span></span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Relación R:R</span>
+                            <span class="text-xs font-bold text-blue-700" style="font-size: 11px;">${rrRatio}</span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50 flex items-center justify-center" style="box-sizing: border-box;">
+                            <span class="text-[10px] font-semibold text-slate-500">DCA PLANNER</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Planificador Chart Visual -->
+                ${chartImg ? `
+                <div class="border border-slate-100 p-4 rounded-xl flex flex-col items-center" style="box-sizing: border-box; width: 100%;">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0; align-self: flex-start;">Gráfico de Niveles Matemáticos</h3>
+                    <img src="${chartImg}" style="width: 100%; max-width: 100%; height: auto; max-height: 200px; object-fit: contain; margin: 0 auto;" />
+                </div>
+                ` : ''}
+
+                <!-- Detailed Levels Table -->
+                <div style="box-sizing: border-box; width: 100%;">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0;">Plan de Compras Limitadas (Escalera)</h3>
+                    <table class="w-full text-left border border-slate-200 rounded-lg overflow-hidden text-xs" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold" style="font-size: 10px;">
+                                <th class="py-2 px-3 text-center">Piso</th>
+                                <th class="py-2 px-3">Precio Entrada</th>
+                                <th class="py-2 px-3 text-right">Asignado</th>
+                                <th class="py-2 px-3 text-right">Unidades Compra</th>
+                                <th class="py-2 px-3 text-right">Promedio Compra</th>
+                                <th class="py-2 px-3 text-center">Riesgo a SL</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700" style="font-size: 10px;">
+                            ${ladderData.map(row => `
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td class="py-2 px-3 text-center font-bold text-slate-500">${row.step}</td>
+                                    <td class="py-2 px-3 font-semibold">${formatMoney(row.price)}</td>
+                                    <td class="py-2 px-3 text-right font-mono">${formatMoney(row.capital)}</td>
+                                    <td class="py-2 px-3 text-right font-mono">${row.units.toLocaleString('es-AR', { maximumFractionDigits: 6 })}</td>
+                                    <td class="py-2 px-3 text-right font-semibold text-emerald-600 font-mono">${formatMoney(row.partialAvg)}</td>
+                                    <td class="py-2 px-3 text-center font-semibold text-red-500">-${row.distanceToSL.toFixed(1)}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Exit Strategy Table -->
+                <div class="border-t border-slate-200 pt-3 mt-auto" style="margin-top: auto; padding-top: 10px; width: 100%;">
+                    <p class="text-[10px] text-slate-400 italic text-center" style="margin: 0; text-align: center; width: 100%;">Informe generado por el planificador de LadderInvest Pro. Las inversiones en mercados financieros conllevan riesgos de capital.</p>
+                </div>
+            `;
+
+            // Append temporarily to the DOM body to allow standard styling compilation
+            document.body.appendChild(element);
+
+            const opt = {
+                margin:       10,
+                filename:     `Planificacion_DCA_${ticker}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().from(element).set(opt).save().then(() => {
+                // Safely remove the element from DOM after compilation completes
+                document.body.removeChild(element);
+            });
+        }
+
+        // Global Portfolio Summary Report Generator (PDF)
+        function exportPortfolioGeneralPDF() {
+            const portfolio = getPortfolio();
+            if (portfolio.length === 0) return;
+
+            const tc = parseFloat(document.getElementById('global-tc').value) || 1200;
+
+            const capAsignado = document.getElementById('port-total-capital').innerText;
+            const capInvertido = document.getElementById('port-invested-capital').innerText;
+            const liquidez = document.getElementById('port-liquidity').innerText;
+            const realizedPnL = document.getElementById('port-realized-pnl').innerText;
+            const realizedPnLPct = document.getElementById('port-realized-pnl-pct').innerText;
+
+            const element = document.createElement('div');
+            element.className = "bg-white text-slate-900 p-6 flex flex-col gap-5 text-sm";
+            element.style.width = '190mm'; // Exactly matches printable area inside 10mm margins
+            element.style.boxSizing = 'border-box';
+            element.style.position = 'absolute';
+            element.style.left = '-9999px'; // Render off-screen safely
+            element.style.top = '0';
+
+            // Calculate formatted position rows for general report
+            let rowsHtml = '';
+            portfolio.forEach(rawItem => {
+                const item = calculatePortfolioItemDetails(rawItem);
+                
+                let itemTotal = item.totalCapital;
+                let itemInvested = item.costBasis;
+                let itemPnL = item.realizedPnL;
+
+                if (item.currency !== globalCurrency) {
+                    if (item.currency === 'USD' && globalCurrency === 'ARS') {
+                        itemTotal *= tc;
+                        itemInvested *= tc;
+                        itemPnL *= tc;
+                    } else if (item.currency === 'ARS' && globalCurrency === 'USD') {
+                        itemTotal /= tc;
+                        itemInvested /= tc;
+                        itemPnL /= tc;
+                    }
+                }
+
+                const progress = ((item.activeBuysCount / item.stepsCount) * 100).toFixed(0);
+
+                rowsHtml += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td class="py-2 px-2 font-extrabold text-blue-900" style="padding: 8px 4px;">${item.ticker}</td>
+                        <td class="py-2 px-2 text-slate-700" style="padding: 8px 4px;">${item.name}</td>
+                        <td class="py-2 px-2 text-right font-mono" style="padding: 8px 4px;">${formatMoney(itemTotal)}</td>
+                        <td class="py-2 px-2 text-right font-mono" style="padding: 8px 4px;">${formatMoney(itemInvested)}</td>
+                        <td class="py-2 px-2 text-right font-mono text-amber-600" style="padding: 8px 4px;">${item.units.toLocaleString('es-AR', { maximumFractionDigits: 5 })}</td>
+                        <td class="py-2 px-2 text-center font-bold text-slate-600" style="padding: 8px 4px;">${progress}%</td>
+                        <td class="py-2 px-2 text-right font-bold ${itemPnL >= 0 ? 'text-emerald-600' : 'text-red-500'} font-mono" style="padding: 8px 4px;">
+                            ${itemPnL >= 0 ? '+' : ''}${formatMoney(itemPnL)}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            element.innerHTML = `
+                <div class="border-b-2 border-blue-600 pb-4 flex justify-between items-center" style="box-sizing: border-box; width: 100%;">
+                    <div>
+                        <h1 class="text-xl font-extrabold text-blue-800 tracking-wide" style="margin: 0; padding: 0;">LadderInvest Pro</h1>
+                        <p class="text-xs text-slate-500" style="margin: 2px 0 0 0;">Reporte Ejecutivo y Estado de Cartera de Inversiones</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs bg-slate-100 text-slate-700 px-3 py-1 rounded-full font-bold uppercase">Cartera Activa</span>
+                        <p class="text-[10px] text-slate-400 mt-1" style="margin: 4px 0 0 0;">Generado: ${new Date().toLocaleDateString('es-AR')}</p>
+                    </div>
+                </div>
+
+                <!-- Global Dashboard Summary -->
+                <div style="box-sizing: border-box; width: 100%;">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0;">Resumen Financiero Global</h3>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; box-sizing: border-box; width: 100%; background-color: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #f1f5f9;">
+                        <div>
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Capital Asignado</span>
+                            <span class="text-sm font-extrabold text-slate-800" style="font-size: 11px;">${capAsignado}</span>
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Capital Comprometido</span>
+                            <span class="text-sm font-extrabold text-slate-800" style="font-size: 11px;">${capInvertido}</span>
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Liquidez Disponible</span>
+                            <span class="text-sm font-extrabold text-emerald-600" style="font-size: 11px;">${liquidez}</span>
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Resultado Consolidado</span>
+                            <span class="text-sm font-extrabold text-blue-800" style="font-size: 11px;">${realizedPnL} <span class="text-[9px] block text-slate-500">${realizedPnLPct}</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Positions Table -->
+                <div style="box-sizing: border-box; width: 100%;">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0;">Desglose de Operativas Vigentes</h3>
+                    <table class="w-full text-left border border-slate-200 rounded-lg overflow-hidden text-xs" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold" style="font-size: 10px;">
+                                <th class="py-2 px-2" style="padding: 8px 4px;">Ticker</th>
+                                <th class="py-2 px-2" style="padding: 8px 4px;">Activo</th>
+                                <th class="py-2 px-2 text-right" style="padding: 8px 4px;">Presupuesto</th>
+                                <th class="py-2 px-2 text-right" style="padding: 8px 4px;">Invertido</th>
+                                <th class="py-2 px-2 text-right" style="padding: 8px 4px;">Unidades</th>
+                                <th class="py-2 px-2 text-center" style="padding: 8px 4px;">Progreso</th>
+                                <th class="py-2 px-2 text-right" style="padding: 8px 4px;">PnL Realizado</th>
+                            </tr>
+                        </thead>
+                        <tbody style="font-size: 10px;">
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="border-t border-slate-200 pt-3 mt-auto" style="margin-top: auto; padding-top: 10px; width: 100%;">
+                    <p class="text-[10px] text-slate-400 italic text-center" style="margin: 0; text-align: center; width: 100%;">LadderInvest Pro Portfolio Management Suite. Todos los datos han sido consolidados de forma local y dinámica en el terminal del usuario.</p>
+                </div>
+            `;
+
+            // Append temporarily to the DOM body to allow standard styling compilation
+            document.body.appendChild(element);
+
+            const opt = {
+                margin:       10,
+                filename:     `Reporte_Cartera_LadderInvest.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().from(element).set(opt).save().then(() => {
+                // Safely remove the element from DOM after compilation completes
+                document.body.removeChild(element);
+            });
+        }
+
+        // Individual Position Report with Real Chart Progress (PDF)
+        function exportPortfolioPositionPDF(itemId) {
+            const portfolio = getPortfolio();
+            const rawItem = portfolio.find(x => x.id === itemId);
+            if (!rawItem) return;
+
+            const item = calculatePortfolioItemDetails(rawItem);
+
+            // Create offscreen light-themed canvas to capture the precise position real chart
+            const offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.style.position = 'absolute';
+            offscreenCanvas.style.left = '-9999px';
+            document.body.appendChild(offscreenCanvas);
+            offscreenCanvas.width = 600;
+            offscreenCanvas.height = 300;
+            const ctx = offscreenCanvas.getContext('2d');
+
+            const labels = item.stepDetails.map(step => `Piso ${step.step}`);
+            const prices = item.stepDetails.map(step => step.price);
+            const sizes = item.stepDetails.map(step => step.capital);
+
+            const pointBackgroundColors = item.stepDetails.map(step => step.executed ? '#059669' : '#e2e8f0');
+            const pointBorderColors = item.stepDetails.map(step => step.executed ? '#10b981' : '#cbd5e1');
+
+            const maxCap = Math.max(...sizes);
+            const minCap = Math.min(...sizes);
+            const bubbleSizes = sizes.map(cap => {
+                if (maxCap === minCap) return 10;
+                return 6 + ((cap - minCap) / (maxCap - minCap)) * 12;
+            });
+
+            const allPrices = [...prices, item.marketPrice, item.stopLoss, item.avgPrice].filter(p => p > 0);
+            item.tpDetails.forEach(tp => { if (tp.price > 0) allPrices.push(tp.price); });
+            const maxVal = Math.max(...allPrices) * 1.05;
+            const minVal = Math.min(...allPrices) * 0.95;
+
+            const tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Operativa Real',
+                        data: prices,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                        pointBackgroundColor: pointBackgroundColors,
+                        pointBorderColor: pointBorderColors,
+                        pointRadius: bubbleSizes,
+                        showLine: true,
+                        borderDash: [4, 4],
+                        borderWidth: 1.5,
+                        tension: 0.1,
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    animation: false, // Turn off animation for instant capture
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            min: minVal,
+                            max: maxVal,
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                color: '#475569',
+                                font: { family: 'Inter', size: 9 },
+                                callback: value => value.toLocaleString('es-AR', { maximumFractionDigits: 3 })
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#475569', font: { family: 'Inter', size: 9 } }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'pdfPortfolioHorizontalLines',
+                    afterDraw: function(chart) {
+                        const {ctx, chartArea: {left, right}, scales: {y}} = chart;
+                        ctx.save();
+
+                        if (item.units > 0 && item.avgPrice > 0) {
+                            const avgY = y.getPixelForValue(item.avgPrice);
+                            ctx.strokeStyle = '#059669';
+                            ctx.lineWidth = 1.5;
+                            ctx.setLineDash([5, 3]);
+                            ctx.beginPath(); ctx.moveTo(left, avgY); ctx.lineTo(right, avgY); ctx.stroke();
+                            ctx.fillStyle = '#059669';
+                            ctx.font = 'bold 8px Inter';
+                            ctx.fillText(`PROM. REAL COMPRA: ${item.avgPrice.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, avgY - 4);
+                        }
+
+                        if (item.stopLoss > 0) {
+                            const slY = y.getPixelForValue(item.stopLoss);
+                            ctx.strokeStyle = '#dc2626';
+                            ctx.lineWidth = 1.5;
+                            ctx.setLineDash([3, 3]);
+                            ctx.beginPath(); ctx.moveTo(left, slY); ctx.lineTo(right, slY); ctx.stroke();
+                            ctx.fillStyle = '#dc2626';
+                            ctx.font = 'bold 8px Inter';
+                            ctx.fillText(`STOP LOSS: ${item.stopLoss.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, left + 5, slY - 4);
+                        }
+
+                        item.tpDetails.forEach((tp) => {
+                            if (tp.price > 0) {
+                                const tpY = y.getPixelForValue(tp.price);
+                                ctx.strokeStyle = tp.executed ? '#059669' : '#7c3aed';
+                                ctx.lineWidth = tp.executed ? 1.5 : 1;
+                                ctx.setLineDash(tp.executed ? [] : [4, 4]);
+                                ctx.beginPath(); ctx.moveTo(left, tpY); ctx.lineTo(right, tpY); ctx.stroke();
+                                ctx.fillStyle = tp.executed ? '#059669' : '#7c3aed';
+                                ctx.font = tp.executed ? 'bold 8px Inter' : '8px Inter';
+                                ctx.fillText(`TP ${tp.tp} (${tp.pct}%)${tp.executed ? ' [VENDIDO]' : ''}: ${tp.price.toLocaleString('es-AR', { maximumFractionDigits: 3 })}`, right - 130, tpY - 4);
+                            }
+                        });
+
+                        ctx.restore();
+                    }
+                }]
+            });
+
+            // Extract position image after layout triggers
+            const positionChartImg = tempChart.toBase64Image();
+
+            // Destroy the temporary offscreen objects to prevent leaking resources
+            tempChart.destroy();
+            document.body.removeChild(offscreenCanvas);
+
+            const element = document.createElement('div');
+            element.className = "bg-white text-slate-900 p-6 flex flex-col gap-5 text-sm";
+            element.style.width = '190mm'; // Exactly matches printable area inside 10mm margins
+            element.style.boxSizing = 'border-box';
+            element.style.position = 'absolute';
+            element.style.left = '-9999px'; // Render off-screen safely
+            element.style.top = '0';
+
+            const progressPct = ((item.activeBuysCount / item.stepsCount) * 100).toFixed(0);
+
+            element.innerHTML = `
+                <div class="border-b-2 border-blue-600 pb-4 flex justify-between items-center" style="box-sizing: border-box; width: 100%;">
+                    <div>
+                        <h1 class="text-xl font-extrabold text-blue-800 tracking-wide" style="margin: 0; padding: 0;">Reporte de Posición Real</h1>
+                        <p class="text-xs text-slate-500" style="margin: 2px 0 0 0;">Cartera de Inversión • Estado y Control Operativo</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold uppercase tracking-wider">${item.ticker}</span>
+                        <p class="text-[10px] text-slate-400 mt-1" style="margin: 4px 0 0 0;">Fecha: ${new Date().toLocaleDateString('es-AR')}</p>
+                    </div>
+                </div>
+
+                <!-- Position Info summary -->
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; width: 100%;">
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-400 uppercase" style="margin: 0 0 4px 0;">Activo Bajo Control</h3>
+                        <p class="text-md font-extrabold text-slate-800" style="margin: 0;">${item.name} (${item.ticker})</p>
+                        <p class="text-[10px] text-slate-500 mt-1" style="margin: 4px 0 0 0;">Presupuesto inicial asignado: ${formatMoney(item.totalCapital, item.currency)}</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="text-xs font-bold text-slate-500 block">Progreso DCA de Compras</span>
+                        <p class="text-md font-extrabold text-blue-700" style="margin: 0;">${item.activeBuysCount} de ${item.stepsCount} Ejecutados (${progressPct}%)</p>
+                    </div>
+                </div>
+
+                <!-- Operational Metrics Grid -->
+                <div style="box-sizing: border-box; width: 100%;">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0;">Resultados Reales de Cartera</h3>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; box-sizing: border-box; width: 100%;">
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Precio Compra Promedio</span>
+                            <span class="text-xs font-bold text-slate-800" style="font-size: 11px;">${formatMoney(item.avgPrice, item.currency)}</span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Unidades Adquiridas</span>
+                            <span class="text-xs font-bold text-slate-800" style="font-size: 11px;">${item.units.toLocaleString('es-AR', { maximumFractionDigits: 5 })}</span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">Capital Comprometido</span>
+                            <span class="text-xs font-bold text-slate-800" style="font-size: 11px;">${formatMoney(item.costBasis, item.currency)}</span>
+                        </div>
+                        <div class="border border-slate-100 p-3 rounded-lg bg-slate-50/50" style="box-sizing: border-box;">
+                            <span class="text-[9px] text-slate-400 block uppercase" style="font-weight: 600;">PnL Realizado</span>
+                            <span class="text-xs font-extrabold ${item.realizedPnL >= 0 ? 'text-emerald-600' : 'text-red-500'}" style="font-size: 11px;">
+                                ${item.realizedPnL >= 0 ? '+' : ''}${formatMoney(item.realizedPnL, item.currency)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Position Progress Chart -->
+                <div class="border border-slate-100 p-4 rounded-xl flex flex-col items-center" style="box-sizing: border-box; width: 100%;">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0; align-self: flex-start;">Gráfico de Progreso Real</h3>
+                    <img src="${positionChartImg}" style="width: 100%; max-width: 100%; height: auto; max-height: 200px; object-fit: contain; margin: 0 auto;" />
+                </div>
+
+                <!-- SPLIT COLUMNS: DCA Steps & TPs Status -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; box-sizing: border-box; width: 100%;">
+                    <div style="box-sizing: border-box;">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0;">Estado Compras Escalera (DCA)</h3>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            ${item.stepDetails.map(step => `
+                                <div class="p-2 rounded border border-slate-100 flex items-center justify-between text-xs ${step.executed ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'bg-slate-50/50 text-slate-500'}" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                                    <span>Piso ${step.step} - ${formatMoney(step.price, item.currency)}</span>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="text-[10px] font-mono">${formatMoney(step.capital, item.currency)}</span>
+                                        <span class="text-[10px] uppercase font-bold" style="font-size: 9px;">${step.executed ? '[EJE]' : '[PEN]'}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div style="box-sizing: border-box;">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase mb-2" style="margin: 0 0 6px 0;">Estado Ventas Escalera (TP)</h3>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            ${item.tpDetails.map(tp => `
+                                <div class="p-2 rounded border border-slate-100 flex items-center justify-between text-xs ${tp.executed ? 'bg-purple-50 text-purple-800 font-semibold' : 'bg-slate-50/50 text-slate-500'}" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                                    <span>TP ${tp.tp} (${tp.pct}%) - ${formatMoney(tp.price, item.currency)}</span>
+                                    <span class="text-[10px] uppercase font-bold" style="font-size: 9px;">${tp.executed ? '[VENDIDO]' : '[PENDIENTE]'}</span>
+                                </div>
+                            `).join('')}
+                            
+                            <div class="p-2 rounded border border-slate-100 flex items-center justify-between text-xs ${item.slExecuted ? 'bg-red-50 text-red-800 font-semibold' : 'bg-slate-50/50 text-slate-500'}" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; margin-top: 8px;">
+                                <span class="font-bold">Piso de Stop Loss (SL)</span>
+                                <span class="font-mono" style="font-size: 10px;">${formatMoney(item.stopLoss, item.currency)} ${item.slExecuted ? '[EJECUTADO]' : '[ACTIVO]'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-200 pt-3 mt-auto" style="margin-top: auto; padding-top: 10px; width: 100%;">
+                    <p class="text-[10px] text-slate-400 italic text-center" style="margin: 0; text-align: center; width: 100%;">Informe de auditoría de operativa real. Generado mediante LadderInvest Pro.</p>
+                </div>
+            `;
+
+            // Append temporarily to the DOM body to allow standard styling compilation
+            document.body.appendChild(element);
+
+            const opt = {
+                margin:       10,
+                filename:     `Reporte_Posicion_${item.ticker}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().from(element).set(opt).save().then(() => {
+                // Safely remove the element from DOM after compilation completes
+                document.body.removeChild(element);
+            });
         }
 
         window.onload = function() {
